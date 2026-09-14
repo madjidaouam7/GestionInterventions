@@ -1,4 +1,4 @@
-ï»¿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
 @using GestionInterventions.Web.Authentication
 @inject CustomAuthenticationStateProvider AuthStateProvider
@@ -14,15 +14,15 @@
                     @(topbarContext.User.FindFirst("Nom")?.Value ??
                     topbarContext.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value)
                 </span>
-                <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleMenu">â–¾</button>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleMenu">?</button>
 
                 <div class="user-dropdown @(_menuOuvert ? "show" : "")">
                     <AuthorizeView Roles="Client" Context="dropdownContext">
                         <Authorized>
-                            <a href="/modifier-coordonnÃ©es">Modifier mes coordonnÃ©es</a>
+                            <a href="/modifier-coordonnées">Modifier mes coordonnées</a>
                         </Authorized>
                     </AuthorizeView>
-                    <button @onclick="HandleLogout">Se dÃ©connecter</button>
+                    <button @onclick="HandleLogout">Se déconnecter</button>
                 </div>
             </div>
         </Authorized>

@@ -16,7 +16,7 @@ public class EquipementDto
     public string Localisation { get; set; } = string.Empty;
 
     public int ClientId { get; set; }
-    
+
     public StatutEquipement Statut { get; set; }
 
     public EquipementDto(){}

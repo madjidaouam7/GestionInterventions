@@ -28,7 +28,7 @@ public class ValiderInterventionCommandHandler : IRequestHandler<ValiderInterven
         {
             throw new DomainException("Seule une intervention réussie peut être validée.");
         }
-        
+
         intervention.Valider();
         intervention.Demande.Equipement.RemettreEnService();
 

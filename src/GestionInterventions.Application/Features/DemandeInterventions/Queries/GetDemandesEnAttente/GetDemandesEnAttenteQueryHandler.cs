@@ -15,12 +15,12 @@ public class GetDemandesEnAttenteQueryHandler : IRequestHandler<GetDemandesEnAtt
     }
 
     public async Task<List<DemandeInterventionDto>> Handle(GetDemandesEnAttenteQuery request, CancellationToken cancellationToken)
-    {   
+    {
 
         var demandeInterventions = await _demandeInterventionRepository.GetEnAttenteAsync(cancellationToken);
 
         return demandeInterventions.Select(demandeIntervention => new DemandeInterventionDto(demandeIntervention))
                                    .ToList();
-    
+
     }
 }

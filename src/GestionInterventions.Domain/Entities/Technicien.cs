@@ -35,7 +35,7 @@ public class Technicien
             throw new DomainException("L'adresse du technicien est obligatoire.");
 
         if (string.IsNullOrWhiteSpace(identityUserId))
-        throw new DomainException("Le client doit être rattaché à un compte utilisateur.");    
+        throw new DomainException("Le client doit être rattaché à un compte utilisateur.");
 
         Nom = nom;
         Email = email;

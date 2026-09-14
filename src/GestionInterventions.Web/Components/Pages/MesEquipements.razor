@@ -95,7 +95,7 @@ else
                     <td>@equipement.NumeroSerie</td>
                     <td>@equipement.Description</td>
                     <td>@equipement.Localisation</td>
-                    <td>@equipement.Statut</td>
+                    <td><span class="badge @GetStatutEquipementBadgeClass(equipement.Statut)">@equipement.Statut</span></td>
                 </tr>
             }
         </tbody>
@@ -210,6 +210,14 @@ else
             _isLoading = false;
         }
     }
+
+    private static string GetStatutEquipementBadgeClass(string statut) => statut switch
+    {
+        "Fonctionnel" => "bg-success",
+        "EnPanne" => "bg-danger",
+        "EnMaintenance" => "bg-warning text-dark",
+        _ => "bg-secondary"
+    };
 
     private class EquipementDto
     {

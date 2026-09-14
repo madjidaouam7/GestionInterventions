@@ -11,7 +11,7 @@ public class HistoriqueEquipementDto
     public StatutEquipement Statut { get; set; }
 
     public List<HistoriqueDemandeDto> Demandes { get; set; } = new();
-    public HistoriqueEquipementDto(){}    
+    public HistoriqueEquipementDto(){}
     public HistoriqueEquipementDto(Equipement equipement)
     {
         EquipementId = equipement.Id;

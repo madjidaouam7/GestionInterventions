@@ -15,12 +15,12 @@ public class GetTechniciensQueryHandler : IRequestHandler<GetTechniciensQuery, L
     }
 
     public async Task<List<TechnicienDto>> Handle(GetTechniciensQuery request, CancellationToken cancellationToken)
-    {   
+    {
 
         var techniciens = await _technicienRepository.GetAllAsync(cancellationToken);
 
         return techniciens.Select(technicien => new TechnicienDto(technicien))
                           .ToList();
-    
+
     }
 }

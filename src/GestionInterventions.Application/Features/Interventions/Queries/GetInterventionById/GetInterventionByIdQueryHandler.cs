@@ -26,7 +26,7 @@ public class GetInterventionByIdQueryHandler : IRequestHandler<GetInterventionBy
         if (intervention is null)
             throw new NotFoundException($"Aucune intervention trouvée avec l'id {request.Id}.");
 
-        
+
         var estResponsable = _currentUserService.Role == "Responsable";
         var estClientProprietaire = _currentUserService.Role == "Client"
             && _currentUserService.ClientId == intervention.Demande.Equipement.ClientId;
@@ -36,7 +36,7 @@ public class GetInterventionByIdQueryHandler : IRequestHandler<GetInterventionBy
         if (!estResponsable && !estClientProprietaire && !estTechnicienAssigne)
             throw new ForbiddenAccessException("Vous n'êtes pas autorisé à consulter cette intervention.");
 
-        
+
         return new InterventionDto(intervention);
     }
 }

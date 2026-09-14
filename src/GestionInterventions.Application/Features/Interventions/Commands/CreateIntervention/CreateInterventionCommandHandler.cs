@@ -42,7 +42,7 @@ public class CreateInterventionCommandHandler : IRequestHandler<CreateInterventi
 
             await _interventionRepository.AddAsync(intervention, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-        
+
         return intervention.Id;
     }
 }
