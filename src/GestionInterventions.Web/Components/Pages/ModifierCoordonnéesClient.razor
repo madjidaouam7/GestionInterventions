@@ -1,0 +1,170 @@
+@page "/modifier-coordonnees"
+@attribute [Authorize(Roles = "Client")]
+@using System.Net.Http.Json
+@using System.Net.Http.Headers
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using GestionInterventions.Web.Authentication
+@inject IHttpClientFactory HttpClientFactory
+@inject AuthenticationStateProvider AuthStateProvider
+@inject TokenProvider TokenProvider
+
+<PageTitle>Modifier mes coordonnées</PageTitle>
+
+<h1>Modifier mes coordonnées</h1>
+
+@if (_isLoading)
+{
+    <p>Chargement...</p>
+}
+else if (_loadError is not null)
+{
+    <div class="alert alert-danger">@_loadError</div>
+}
+else
+{
+    <EditForm Model="_formModel" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Email</label>
+            <InputText class="form-control" @bind-Value="_formModel.Email" />
+        </div>
+
+        <div class="mb-3">
+            <label>Téléphone</label>
+            <InputText class="form-control" @bind-Value="_formModel.Telephone" />
+        </div>
+
+        <div class="mb-3">
+            <label>Adresse</label>
+            <InputText class="form-control" @bind-Value="_formModel.Adresse" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="alert alert-danger">@_errorMessage</div>
+        }
+
+        @if (_success)
+        {
+            <div class="alert alert-success">Coordonnées mises à jour avec succès.</div>
+        }
+
+        <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
+            @(_isSubmitting ? "Enregistrement..." : "Enregistrer")
+        </button>
+    </EditForm>
+}
+
+@code {
+    private FormModel _formModel = new();
+    private bool _isLoading = true;
+    private string? _loadError;
+    private bool _isSubmitting;
+    private string? _errorMessage;
+    private bool _success;
+    private int _clientId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var clientIdClaim = authState.User.FindFirst("ClientId")?.Value;
+
+            if (clientIdClaim is null || !int.TryParse(clientIdClaim, out _clientId))
+            {
+                _loadError = "Impossible de déterminer votre identifiant client.";
+                return;
+            }
+
+            var client = HttpClientFactory.CreateClient("Api");
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+            var response = await client.GetAsync($"api/Clients/{_clientId}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _loadError = "Impossible de charger vos informations.";
+                return;
+            }
+
+            var clientDto = await response.Content.ReadFromJsonAsync<ClientDto>();
+
+            if (clientDto is not null)
+            {
+                _formModel = new FormModel
+                {
+                    Email = clientDto.Email,
+                    Telephone = clientDto.Telephone,
+                    Adresse = clientDto.Adresse
+                };
+            }
+        }
+        catch (Exception)
+        {
+            _loadError = "Une erreur est survenue lors du chargement.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        _isSubmitting = true;
+        _errorMessage = null;
+        _success = false;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("Api");
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+            var response = await client.PutAsJsonAsync($"api/Clients/{_clientId}", new
+            {
+                Email = _formModel.Email,
+                Telephone = _formModel.Telephone,
+                Adresse = _formModel.Adresse
+            });
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var details = await response.Content.ReadAsStringAsync();
+                _errorMessage = $"Erreur lors de la mise à jour : {details}";
+                return;
+            }
+
+            _success = true;
+        }
+        catch (Exception)
+        {
+            _errorMessage = "Impossible de contacter le serveur.";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private class FormModel
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Telephone { get; set; } = string.Empty;
+        public string Adresse { get; set; } = string.Empty;
+    }
+
+    private class ClientDto
+    {
+        public int Id { get; set; }
+        public string Nom { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Telephone { get; set; } = string.Empty;
+        public string Adresse { get; set; } = string.Empty;
+    }
+}

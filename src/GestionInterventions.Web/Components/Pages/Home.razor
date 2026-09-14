@@ -1,0 +1,186 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@using System.Net.Http.Headers
+@using GestionInterventions.Web.Authentication
+@attribute [AllowAnonymous]
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject IHttpClientFactory HttpClientFactory
+@inject TokenProvider TokenProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Accueil</PageTitle>
+
+<AuthorizeView Context="authContext">
+    <Authorized>
+        <h1>Bonjour, @(authContext.User.FindFirst("Nom")?.Value ??
+                                    authContext.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value)</h1>
+
+            @if (_isLoading)
+            {
+                <p class="text-muted">Chargement du tableau de bord...</p>
+            }
+            else if (_errorMessage is not null)
+            {
+                <div class="alert alert-danger">@_errorMessage</div>
+            }
+            else
+            {
+                <div class="row g-3 mt-2">
+                    @foreach (var stat in _stats)
+                    {
+                        <div class="col-md-4">
+                            <a href="@stat.Link" class="text-decoration-none">
+                                <div class="stat-card">
+                                    <div class="stat-value">@stat.Value</div>
+                                    <div class="stat-label">@stat.Label</div>
+                                </div>
+                            </a>
+                        </div>
+                    }
+                </div>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <h1>Bienvenue sur GestionInterventions</h1>
+            <p>Gérez vos équipements et interventions techniques en toute simplicité.</p>
+            <a href="/login" class="btn btn-primary">Se connecter</a>
+            <a href="/register" class="btn btn-outline-primary ms-2">Créer un compte</a>
+        </NotAuthorized>
+    </AuthorizeView>
+
+@code {
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private List<StatItem> _stats = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var role = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+
+        if (role is null)
+        {
+            _isLoading = false;
+            return;
+        }
+
+        try
+        {
+            var httpClient = HttpClientFactory.CreateClient("Api");
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+            if (role == "Client")
+            {
+                await ChargerStatsClient(httpClient, authState);
+            }
+            else if (role == "Technicien")
+            {
+                await ChargerStatsTechnicien(httpClient);
+            }
+            else if (role == "Responsable")
+            {
+                await ChargerStatsResponsable(httpClient);
+            }
+        }
+        catch (Exception)
+        {
+            _errorMessage = "Impossible de charger le tableau de bord.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task ChargerStatsClient(HttpClient httpClient,
+Microsoft.AspNetCore.Components.Authorization.AuthenticationState authState)
+    {
+        var clientIdClaim = authState.User.FindFirst("ClientId")?.Value;
+        if (clientIdClaim is null) return;
+
+        var equipementsResponse = await httpClient.GetAsync($"api/Equipements/{clientIdClaim}/equipements");
+        var equipements = equipementsResponse.IsSuccessStatusCode
+            ? await equipementsResponse.Content.ReadFromJsonAsync<List<EquipementDto>>()
+            : new List<EquipementDto>();
+
+        var demandesResponse = await httpClient.GetAsync("api/DemandeInterventions/mes-demandes");
+        var demandes = demandesResponse.IsSuccessStatusCode
+            ? await demandesResponse.Content.ReadFromJsonAsync<List<DemandeDto>>()
+            : new List<DemandeDto>();
+
+        _stats = new List<StatItem>
+        {
+            new("Équipements", equipements?.Count ?? 0, "/mes-equipements"),
+            new("Équipements en panne", equipements?.Count(e => e.Statut == "EnPanne") ?? 0, "/mes-equipements"),
+            new("Demandes en attente", demandes?.Count(d => d.Statut == "EnAttente") ?? 0, "/mes-demandes")
+        };
+    }
+
+    private async Task ChargerStatsTechnicien(HttpClient httpClient)
+    {
+        var response = await httpClient.GetAsync("api/Interventions/mes-interventions");
+        var interventions = response.IsSuccessStatusCode
+            ? await response.Content.ReadFromJsonAsync<List<InterventionDto>>()
+            : new List<InterventionDto>();
+
+        _stats = new List<StatItem>
+        {
+            new("Interventions planifiées", interventions?.Count(i => i.Statut == "Planifiee") ?? 0, "/mes-interventions"),
+            new("Interventions en cours", interventions?.Count(i => i.Statut == "EnCours") ?? 0, "/mes-interventions"),
+            new("Interventions terminées", interventions?.Count(i => i.Statut == "Terminee" || i.Statut == "Cloturee") ?? 0,
+"/mes-interventions")
+        };
+    }
+
+    private async Task ChargerStatsResponsable(HttpClient httpClient)
+    {
+        var demandesResponse = await httpClient.GetAsync("api/DemandeInterventions");
+        var demandes = demandesResponse.IsSuccessStatusCode
+            ? await demandesResponse.Content.ReadFromJsonAsync<List<DemandeDto>>()
+            : new List<DemandeDto>();
+
+        var interventionsResponse = await httpClient.GetAsync("api/Interventions");
+        var interventions = interventionsResponse.IsSuccessStatusCode
+            ? await interventionsResponse.Content.ReadFromJsonAsync<List<InterventionDto>>()
+            : new List<InterventionDto>();
+
+        var clientsResponse = await httpClient.GetAsync("api/Clients");
+        var clients = clientsResponse.IsSuccessStatusCode
+            ? await clientsResponse.Content.ReadFromJsonAsync<List<object>>()
+            : new List<object>();
+
+        var techniciensResponse = await httpClient.GetAsync("api/Techniciens");
+        var techniciens = techniciensResponse.IsSuccessStatusCode
+            ? await techniciensResponse.Content.ReadFromJsonAsync<List<object>>()
+            : new List<object>();
+
+        _stats = new List<StatItem>
+        {
+            new("Demandes en attente", demandes?.Count(d => d.Statut == "EnAttente") ?? 0, "/demandes"),
+            new("Interventions à valider", interventions?.Count(i => i.Statut == "Terminee") ?? 0, "/interventions-a-valider"),
+            new("Clients", clients?.Count ?? 0, "/clients"),
+            new("Techniciens", techniciens?.Count ?? 0, "/techniciens")
+        };
+    }
+
+    private record StatItem(string Label, int Value, string Link);
+
+    private class EquipementDto
+    {
+        public int Id { get; set; }
+        public string Statut { get; set; } = string.Empty;
+    }
+
+    private class DemandeDto
+    {
+        public int Id { get; set; }
+        public string Statut { get; set; } = string.Empty;
+    }
+
+    private class InterventionDto
+    {
+        public int Id { get; set; }
+        public string Statut { get; set; } = string.Empty;
+    }
+}

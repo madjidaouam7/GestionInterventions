@@ -1,0 +1,55 @@
+﻿@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@using GestionInterventions.Web.Authentication
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<div class="app-topbar">
+    <a href="/" class="brand">GestionInterventions</a>
+
+    <AuthorizeView Context="topbarContext">
+        <Authorized>
+            <div class="user-menu">
+                <span class="user-name">
+                    @(topbarContext.User.FindFirst("Nom")?.Value ??
+                    topbarContext.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value)
+                </span>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleMenu">▾</button>
+
+                <div class="user-dropdown @(_menuOuvert ? "show" : "")">
+                    <AuthorizeView Roles="Client" Context="dropdownContext">
+                        <Authorized>
+                            <a href="/modifier-coordonnées">Modifier mes coordonnées</a>
+                        </Authorized>
+                    </AuthorizeView>
+                    <button @onclick="HandleLogout">Se déconnecter</button>
+                </div>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+<div class="d-flex">
+    <div class="app-sidebar">
+        <NavMenu />
+    </div>
+
+    <main class="flex-grow-1 p-4">
+        @Body
+    </main>
+</div>
+
+@code {
+    private bool _menuOuvert;
+
+    private void ToggleMenu()
+    {
+        _menuOuvert = !_menuOuvert;
+    }
+
+    private void HandleLogout()
+    {
+        AuthStateProvider.MarkUserAsLoggedOut();
+        Navigation.NavigateTo("/", forceLoad: true);
+    }
+}

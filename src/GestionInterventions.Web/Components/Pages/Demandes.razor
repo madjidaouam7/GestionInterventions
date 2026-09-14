@@ -1,0 +1,408 @@
+@page "/demandes"
+@attribute [Authorize(Roles = "Responsable")]
+@using System.Net.Http.Json
+@using System.Net.Http.Headers
+@using Microsoft.AspNetCore.Authorization
+@using GestionInterventions.Web.Authentication
+@inject IHttpClientFactory HttpClientFactory
+@inject TokenProvider TokenProvider
+
+<PageTitle>Demandes d'intervention</PageTitle>
+
+<h1>Demandes d'intervention</h1>
+
+@if (_isLoading)
+{
+    <p>Chargement...</p>
+}
+else if (_errorMessage is not null)
+{
+    <div class="alert alert-danger">@_errorMessage</div>
+}
+else if (_demandes is null || _demandes.Count == 0)
+{
+    <p>Aucune demande enregistrée.</p>
+}
+else
+{
+    @foreach (var demande in _demandes.OrderByDescending(d => d.DateDemande))
+    {
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">
+                    Demande #@demande.Id — @demande.EquipementNom
+                    <span class="badge @GetStatutBadgeClass(demande.Statut) ms-2">@demande.Statut</span>
+                </h5>
+                <p class="card-text">
+                    @demande.Description<br />
+                    <span class="badge @(demande.Priorite == "Urgente" ? "bg-danger" : "bg-secondary")">
+                        @demande.Priorite
+                    </span>
+                    <span class="text-muted ms-2">@demande.DateDemande.ToString("dd/MM/yyyy HH:mm")</span>
+                </p>
+
+                @if (_actionError is not null && _actionErrorDemandeId == demande.Id)
+                {
+                    <div class="alert alert-danger">@_actionError</div>
+                }
+
+                @if (demande.Statut == "EnAttente")
+                {
+                    <button class="btn btn-success" @onclick="() => HandleAccepter(demande.Id)" disabled="@_isProcessing">
+                        Accepter
+                    </button>
+                    <button class="btn btn-outline-danger ms-2" @onclick="() => HandleRefuser(demande.Id)"
+                            disabled="@_isProcessing">
+                        Refuser
+                    </button>
+                }
+                else if (demande.Statut == "Acceptee")
+                {
+                    @if (demande.InterventionId is not null)
+                    {
+                        @if (demande.InterventionStatut == "Planifiee")
+                        {
+                            <span class="badge bg-success">Planifiée</span>
+
+                            <button class="btn btn-outline-primary ms-2" @onclick="() => OuvrirModificationPlanification(demande)">
+                                Modifier planification
+                            </button>
+
+                            @if (_demandeEnModificationId == demande.Id)
+                            {
+                                <EditForm Model="_modificationPlanificationModel" OnValidSubmit="() => HandleModifierPlanification(demande)">
+
+                                    <DataAnnotationsValidator />
+
+                                    <div class="mb-2 mt-2">
+                                        <label>Date prévue</label>
+
+                                        <InputDate Type="InputDateType.DateTimeLocal" class="form-control"
+                                                   @bind-Value="_modificationPlanificationModel.DatePrevue" />
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary" disabled="@_isProcessing">
+                                        @(_isProcessing ? "Modification..." : "Enregistrer")
+                                    </button>
+
+                                    <button type="button" class="btn btn-outline-secondary ms-2" @onclick="AnnulerModificationPlanification">
+                                        Annuler
+                                    </button>
+
+                                </EditForm>
+                            }
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Intervention @demande.InterventionStatut</span>
+                        }
+                    }
+                    else if (_demandeEnPlanificationId == demande.Id)
+                    {
+                        <EditForm Model="_planificationModel" OnValidSubmit="() => HandlePlanifier(demande.Id)">
+                            <DataAnnotationsValidator />
+
+                            <div class="mb-2">
+                                <label>Technicien</label>
+                                <InputSelect class="form-select" @bind-Value="_planificationModel.TechnicienId">
+                                    <option value="0">-- Sélectionnez un technicien --</option>
+                                    @if (_techniciens is not null)
+                                    {
+                                        @foreach (var technicien in _techniciens)
+                                        {
+                                            <option value="@technicien.Id">@technicien.Nom</option>
+                                        }
+                                    }
+                                </InputSelect>
+                            </div>
+
+                            <div class="mb-2">
+                                <label>Date prévue</label>
+                                <InputDate Type="InputDateType.DateTimeLocal" class="form-control"
+                                           @bind-Value="_planificationModel.DatePrevue" />
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" disabled="@_isProcessing">
+                                @(_isProcessing ? "Envoi..." : "Confirmer la planification")
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary ms-2" @onclick="AnnulerPlanification">
+                                Annuler
+                            </button>
+                        </EditForm>
+                    }
+                    else
+                    {
+                        <button class="btn btn-primary" @onclick="() => OuvrirPlanification(demande.Id)">
+                            Planifier une intervention
+                        </button>
+                    }
+                }
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<DemandeDto>? _demandes;
+    private List<TechnicienDto>? _techniciens;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private bool _isProcessing;
+
+    private int? _demandeEnPlanificationId;
+    private PlanificationModel _planificationModel = new();
+
+    private int? _demandeEnModificationId;
+    private ModificationPlanificationModel _modificationPlanificationModel = new();
+
+    private string? _actionError;
+    private int? _actionErrorDemandeId;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ChargerDemandes();
+        await ChargerTechniciens();
+    }
+
+    private async Task ChargerDemandes()
+    {
+        _isLoading = true;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("Api");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+            var response = await client.GetAsync("api/DemandeInterventions");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = "Impossible de charger les demandes.";
+                return;
+            }
+
+            _demandes = await response.Content.ReadFromJsonAsync<List<DemandeDto>>();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "Une erreur est survenue lors du chargement.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task ChargerTechniciens()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("Api");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+            var response = await client.GetAsync("api/Techniciens");
+
+            if (response.IsSuccessStatusCode)
+            {
+                _techniciens = await response.Content.ReadFromJsonAsync<List<TechnicienDto>>();
+            }
+        }
+        catch (Exception)
+        {
+            // Silencieux : si les techniciens ne chargent pas, le select restera vide,
+            // l'erreur apparaîtra naturellement si l'utilisateur tente de planifier.
+        }
+    }
+
+    private async Task HandleAccepter(int demandeId) => await ExecuterAction(demandeId, "accepter");
+
+    private async Task HandleRefuser(int demandeId) => await ExecuterAction(demandeId, "refuser");
+
+    private async Task ExecuterAction(int demandeId, string action)
+    {
+        _isProcessing = true;
+        _actionError = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("Api");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+            var response = await client.PutAsync($"api/DemandeInterventions/{demandeId}/{action}", null);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var details = await response.Content.ReadAsStringAsync();
+                _actionError = $"Erreur : {details}";
+                _actionErrorDemandeId = demandeId;
+                return;
+            }
+
+            await ChargerDemandes();
+        }
+        catch (Exception)
+        {
+            _actionError = "Impossible de contacter le serveur.";
+            _actionErrorDemandeId = demandeId;
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private void OuvrirPlanification(int demandeId)
+    {
+        _demandeEnPlanificationId = demandeId;
+        _planificationModel = new PlanificationModel { DatePrevue = DateTime.Now.AddDays(1) };
+    }
+
+    private void OuvrirModificationPlanification(DemandeDto demande)
+    {
+        _demandeEnModificationId = demande.Id;
+
+        _modificationPlanificationModel = new ModificationPlanificationModel
+        {
+            DatePrevue = demande.DatePrevue ??
+            DateTime.Now.AddDays(1)
+        };
+    }
+
+    private void AnnulerPlanification()
+    {
+        _demandeEnPlanificationId = null;
+    }
+
+    private async Task HandlePlanifier(int demandeId)
+    {
+        _isProcessing = true;
+        _actionError = null;
+
+        try
+        {
+            if (_planificationModel.TechnicienId == 0)
+            {
+                _actionError = "Veuillez sélectionner un technicien.";
+                _actionErrorDemandeId = demandeId;
+                return;
+            }
+
+            var client = HttpClientFactory.CreateClient("Api");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+            var response = await client.PostAsJsonAsync("api/Interventions", new
+            {
+                DemandeId = demandeId,
+                TechnicienId = _planificationModel.TechnicienId,
+                DatePrevue = _planificationModel.DatePrevue
+            });
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var details = await response.Content.ReadAsStringAsync();
+                _actionError = $"Erreur : {details}";
+                _actionErrorDemandeId = demandeId;
+                return;
+            }
+
+            _demandeEnPlanificationId = null;
+            await ChargerDemandes();
+        }
+        catch (Exception)
+        {
+            _actionError = "Impossible de contacter le serveur.";
+            _actionErrorDemandeId = demandeId;
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+
+    private async Task HandleModifierPlanification(DemandeDto demande)
+    {
+        _isProcessing = true;
+        _actionError = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("Api");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+            var response = await client.PutAsJsonAsync($"api/Interventions/{demande.InterventionId}", new
+            {
+                DatePrevue = _modificationPlanificationModel.DatePrevue
+            });
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var details = await response.Content.ReadAsStringAsync();
+
+                _actionError = $"Erreur : {details}";
+                _actionErrorDemandeId = demande.Id;
+                return;
+            }
+
+            _demandeEnModificationId = null;
+
+            await ChargerDemandes();
+        }
+        catch (Exception)
+        {
+            _actionError = "Impossible de contacter le serveur.";
+            _actionErrorDemandeId = demande.Id;
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private void AnnulerModificationPlanification()
+    {
+        _demandeEnModificationId = null;
+    }
+
+    private static string GetStatutBadgeClass(string statut) => statut switch
+    {
+        "EnAttente" => "bg-warning text-dark",
+        "Acceptee" => "bg-info text-dark",
+        "Refusee" => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private class PlanificationModel
+    {
+        public int TechnicienId { get; set; }
+        public DateTime DatePrevue { get; set; }
+    }
+
+    private class ModificationPlanificationModel
+    {
+        public DateTime DatePrevue { get; set; }
+    }
+
+    private class DemandeDto
+    {
+        public int Id { get; set; }
+        public string Description { get; set; } = string.Empty;
+        public DateTime DateDemande { get; set; }
+        public int EquipementId { get; set; }
+        public string EquipementNom { get; set; } = string.Empty;
+        public string Priorite { get; set; } = string.Empty;
+        public string Statut { get; set; } = string.Empty;
+        public int? InterventionId { get; set; }
+        public DateTime? DatePrevue { get; set; }
+        public string? InterventionStatut { get; set; }
+    }
+
+    private class TechnicienDto
+    {
+        public int Id { get; set; }
+        public string Nom { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Adresse { get; set; } = string.Empty;
+        public string Telephone { get; set; } = string.Empty;
+    }
+}

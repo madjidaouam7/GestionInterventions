@@ -1,0 +1,175 @@
+@page "/interventions-a-valider"
+@attribute [Authorize(Roles = "Responsable")]
+@using System.Net.Http.Json
+@using System.Net.Http.Headers
+@using Microsoft.AspNetCore.Authorization
+@using GestionInterventions.Web.Authentication
+@inject IHttpClientFactory HttpClientFactory
+@inject TokenProvider TokenProvider
+
+<PageTitle>Interventions à valider</PageTitle>
+
+<h1>Interventions terminées</h1>
+
+@if (_isLoading)
+{
+    <p>Chargement...</p>
+}
+else if (_errorMessage is not null)
+{
+    <div class="alert alert-danger">@_errorMessage</div>
+}
+else
+{
+    var aTraiter = _interventions?.Where(i => i.Statut == "Terminee").OrderBy(i => i.DatePrevue).ToList();
+
+    if (aTraiter is null || aTraiter.Count == 0)
+    {
+        <p>Aucune intervention en attente de validation.</p>
+    }
+    else
+    {
+        @foreach (var intervention in aTraiter)
+        {
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Intervention #@intervention.Id — @intervention.TechnicienNom</h5>
+                    <p class="card-text">
+                        Date prévue : @intervention.DatePrevue.ToString("dd/MM/yyyy HH:mm")
+                    </p>
+
+                    @if (intervention.CompteRendu is not null)
+                    {
+                        <div class="mb-2">
+                            <strong>Opérations effectuées :</strong> @intervention.CompteRendu.OperationsEffectuees<br />
+                            <strong>Observations :</strong> @intervention.CompteRendu.Observations<br />
+                            <strong>Résultat :</strong>
+                            <span class="badge @(intervention.CompteRendu.Resultat == "Succes" ? "bg-success" : "bg-danger")">
+                                @intervention.CompteRendu.Resultat
+                            </span>
+                            @if (!string.IsNullOrWhiteSpace(intervention.CompteRendu.Recommandations))
+                            {
+                                <br />
+                                <strong>Recommandations :</strong>
+                                @intervention.CompteRendu.Recommandations
+                            }
+                        </div>
+                    }
+
+                    @if (_actionError is not null && _actionErrorInterventionId == intervention.Id)
+                    {
+                        <div class="alert alert-danger">@_actionError</div>
+                    }
+
+                    <button class="btn btn-success" @onclick="() => HandleValider(intervention.Id)" disabled="@_isProcessing">
+                        Valider
+                    </button>
+                    <button class="btn btn-outline-warning ms-2" @onclick="() => HandleDemanderCorrection(intervention.Id)"
+                            disabled="@_isProcessing">
+                        Demander une correction
+                    </button>
+                </div>
+            </div>
+        }
+    }
+}
+
+@code {
+    private List<InterventionDto>? _interventions;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private bool _isProcessing;
+
+    private string? _actionError;
+    private int? _actionErrorInterventionId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ChargerInterventions();
+    }
+
+    private async Task ChargerInterventions()
+    {
+        _isLoading = true;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("Api");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+            var response = await client.GetAsync("api/Interventions");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = "Impossible de charger les interventions.";
+                return;
+            }
+
+            _interventions = await response.Content.ReadFromJsonAsync<List<InterventionDto>>();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "Une erreur est survenue lors du chargement.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleValider(int interventionId) => await ExecuterAction(interventionId, "valider");
+
+    private async Task HandleDemanderCorrection(int interventionId) => await ExecuterAction(interventionId,
+"demander-correction");
+
+    private async Task ExecuterAction(int interventionId, string action)
+    {
+        _isProcessing = true;
+        _actionError = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("Api");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+            var response = await client.PutAsync($"api/Interventions/{interventionId}/{action}", null);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var details = await response.Content.ReadAsStringAsync();
+                _actionError = $"Erreur : {details}";
+                _actionErrorInterventionId = interventionId;
+                return;
+            }
+
+            await ChargerInterventions();
+        }
+        catch (Exception)
+        {
+            _actionError = "Impossible de contacter le serveur.";
+            _actionErrorInterventionId = interventionId;
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private class InterventionDto
+    {
+        public int Id { get; set; }
+        public DateTime DatePrevue { get; set; }
+        public int DemandeId { get; set; }
+        public int TechnicienId { get; set; }
+        public string TechnicienNom { get; set; } = string.Empty;
+        public string Statut { get; set; } = string.Empty;
+        public CompteRenduDto? CompteRendu { get; set; }
+    }
+
+    private class CompteRenduDto
+    {
+        public string OperationsEffectuees { get; set; } = string.Empty;
+        public string Observations { get; set; } = string.Empty;
+        public string Resultat { get; set; } = string.Empty;
+        public string? Recommandations { get; set; }
+    }
+}

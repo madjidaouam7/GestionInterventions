@@ -1,0 +1,139 @@
+@page "/toutes-interventions"
+@attribute [Authorize(Roles = "Responsable")]
+@using System.Net.Http.Json
+@using System.Net.Http.Headers
+@using Microsoft.AspNetCore.Authorization
+@using GestionInterventions.Web.Authentication
+@inject IHttpClientFactory HttpClientFactory
+@inject TokenProvider TokenProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Toutes les interventions</PageTitle>
+
+<h1>Toutes les interventions</h1>
+
+@if (_isLoading)
+{
+    <p>Chargement...</p>
+}
+else if (_errorMessage is not null)
+{
+    <div class="alert alert-danger">@_errorMessage</div>
+}
+else
+{
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label>Filtrer par ID d'intervention</label>
+            <input class="form-control" @bind="_filtreId" @bind:event="oninput" placeholder="Ex: 3" />
+        </div>
+        <div class="col-md-4">
+            <label>Filtrer par ID technicien</label>
+            <input class="form-control" @bind="_filtreTechnicienId" @bind:event="oninput" placeholder="Ex: 2" />
+        </div>
+        <div class="col-md-4">
+            <label>Filtrer par statut</label>
+            <select class="form-select" @bind="_filtreStatut">
+                <option value="">-- Tous --</option>
+                <option value="Planifiee">Planifiée</option>
+                <option value="EnCours">En cours</option>
+                <option value="Terminee">Terminée</option>
+                <option value="Cloturee">Clôturée</option>
+            </select>
+        </div>
+    </div>
+
+    var filtrees = _interventions?
+        .Where(i => string.IsNullOrWhiteSpace(_filtreId) || i.Id.ToString().Contains(_filtreId))
+        .Where(i => string.IsNullOrWhiteSpace(_filtreTechnicienId) || i.TechnicienId.ToString().Contains(_filtreTechnicienId))
+        .Where(i => string.IsNullOrWhiteSpace(_filtreStatut) || i.Statut == _filtreStatut)
+        .OrderByDescending(i => i.DatePrevue)
+        .ToList();
+
+    @if (filtrees is null || filtrees.Count == 0)
+    {
+        <p>Aucune intervention ne correspond aux filtres.</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Technicien</th>
+                    <th>Date prévue</th>
+                    <th>Statut</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var intervention in filtrees)
+                {
+                    <tr>
+                        <td>@intervention.Id</td>
+                        <td>@intervention.TechnicienNom</td>
+                        <td>@intervention.DatePrevue.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td><span class="badge bg-secondary">@intervention.Statut</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => VoirDetail(intervention.Id)">
+                                Voir détails
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private List<InterventionDto>? _interventions;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+
+    private string _filtreId = string.Empty;
+    private string _filtreTechnicienId = string.Empty;
+    private string _filtreStatut = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("Api");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+            var response = await client.GetAsync("api/Interventions");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = "Impossible de charger les interventions.";
+                return;
+            }
+
+            _interventions = await response.Content.ReadFromJsonAsync<List<InterventionDto>>();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "Une erreur est survenue lors du chargement.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void VoirDetail(int interventionId)
+    {
+        Navigation.NavigateTo($"/intervention/{interventionId}");
+    }
+
+    private class InterventionDto
+    {
+        public int Id { get; set; }
+        public DateTime DatePrevue { get; set; }
+        public int DemandeId { get; set; }
+        public int TechnicienId { get; set; }
+        public string TechnicienNom { get; set; } = string.Empty;
+        public string Statut { get; set; } = string.Empty;
+    }
+}

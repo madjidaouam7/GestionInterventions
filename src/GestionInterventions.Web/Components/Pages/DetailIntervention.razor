@@ -1,0 +1,118 @@
+@page "/intervention/{InterventionId:int}"
+@attribute [Authorize(Roles = "Client,Technicien,Responsable")]
+@using System.Net.Http.Json
+@using System.Net.Http.Headers
+@using Microsoft.AspNetCore.Authorization
+@using GestionInterventions.Web.Authentication
+@inject IHttpClientFactory HttpClientFactory
+@inject TokenProvider TokenProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Détail intervention</PageTitle>
+
+<h1>Intervention #@InterventionId</h1>
+
+@if (_isLoading)
+{
+    <p>Chargement...</p>
+}
+else if (_errorMessage is not null)
+{
+    <div class="alert alert-danger">@_errorMessage</div>
+}
+else if (_intervention is not null)
+{
+    <div class="card">
+        <div class="card-body">
+            <p>
+                <strong>Statut :</strong> <span class="badge bg-secondary">@_intervention.Statut</span><br />
+                <strong>Date prévue :</strong> @_intervention.DatePrevue.ToString("dd/MM/yyyy HH:mm")<br />
+                <strong>Demande :</strong> #@_intervention.DemandeId<br />
+                <strong>Technicien :</strong> @_intervention.TechnicienNom
+            </p>
+
+            @if (_intervention.CompteRendu is not null)
+            {
+                <hr />
+                <h5>Compte-rendu</h5>
+                <p>
+                    <strong>Opérations effectuées :</strong> @_intervention.CompteRendu.OperationsEffectuees<br />
+                    <strong>Observations :</strong> @_intervention.CompteRendu.Observations<br />
+                    <strong>Résultat :</strong>
+                    <span class="badge @(_intervention.CompteRendu.Resultat == "Succes" ? "bg-success" : "bg-danger")">
+                        @_intervention.CompteRendu.Resultat
+                    </span>
+                    @if (!string.IsNullOrWhiteSpace(_intervention.CompteRendu.Recommandations))
+                    {
+                        <br />
+                        <strong>Recommandations :</strong>
+                        @_intervention.CompteRendu.Recommandations
+                    }
+                </p>
+            }
+        </div>
+    </div>
+
+    <button class="btn btn-outline-secondary mt-3" @onclick="Retour">Retour</button>
+}
+
+@code {
+    [Parameter]
+    public int InterventionId { get; set; }
+
+    private InterventionDto? _intervention;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("Api");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+            var response = await client.GetAsync($"api/Interventions/{InterventionId}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var details = await response.Content.ReadAsStringAsync();
+                _errorMessage = $"Erreur : {(int)response.StatusCode} {response.StatusCode}. {details}";
+                return;
+            }
+
+            _intervention = await response.Content.ReadFromJsonAsync<InterventionDto>();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "Impossible de contacter le serveur.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void Retour()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private class InterventionDto
+    {
+        public int Id { get; set; }
+        public DateTime DatePrevue { get; set; }
+        public int DemandeId { get; set; }
+        public int TechnicienId { get; set; }
+        public string TechnicienNom { get; set; } = string.Empty;
+        public string Statut { get; set; } = string.Empty;
+        public CompteRenduDto? CompteRendu { get; set; }
+    }
+
+    private class CompteRenduDto
+    {
+        public string OperationsEffectuees { get; set; } = string.Empty;
+        public string Observations { get; set; } = string.Empty;
+        public string Resultat { get; set; } = string.Empty;
+        public string? Recommandations { get; set; }
+    }
+}

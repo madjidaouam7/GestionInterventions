@@ -1,0 +1,245 @@
+@page "/historique-equipement"
+@attribute [Authorize(Roles = "Client,Responsable")]
+@using System.Net.Http.Json
+@using System.Net.Http.Headers
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using GestionInterventions.Web.Authentication
+@inject IHttpClientFactory HttpClientFactory
+@inject AuthenticationStateProvider AuthStateProvider
+@inject TokenProvider TokenProvider
+
+<PageTitle>Historique équipement</PageTitle>
+
+<h1>Historique d'un équipement</h1>
+
+@if (_isLoadingEquipements)
+{
+    <p>Chargement des équipements...</p>
+}
+else if (_loadError is not null)
+{
+    <div class="alert alert-danger">@_loadError</div>
+}
+else if (_equipements is null || _equipements.Count == 0)
+{
+    <p>Aucun équipement disponible.</p>
+}
+else
+{
+    <div class="mb-3">
+        <label>Équipement</label>
+        <select class="form-select" @onchange="OnEquipementSelectionne">
+            <option value="0">-- Sélectionnez un équipement --</option>
+            @foreach (var equipement in _equipements)
+            {
+                <option value="@equipement.Id">@equipement.Nom (@equipement.NumeroSerie)</option>
+            }
+        </select>
+    </div>
+
+    @if (_isLoadingHistorique)
+    {
+        <p>Chargement de l'historique...</p>
+    }
+    else if (_historiqueError is not null)
+    {
+        <div class="alert alert-danger">@_historiqueError</div>
+    }
+    else if (_historique is not null)
+    {
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5>@_historique.Nom (@_historique.NumeroSerie)</h5>
+                <p>Statut actuel : <span class="badge bg-secondary">@_historique.Statut</span></p>
+            </div>
+        </div>
+
+        @if (_historique.Demandes.Count == 0)
+        {
+            <p>Aucune demande enregistrée pour cet équipement.</p>
+        }
+        else
+        {
+            @foreach (var demande in _historique.Demandes.OrderByDescending(d => d.DateDemande))
+            {
+                <div class="card mb-2">
+                    <div class="card-body">
+                        <h6>
+                            Demande #@demande.Id
+                            <span class="badge bg-info text-dark ms-1">@demande.Statut</span>
+                            <span
+                            class="badge @(demande.Priorite == "Urgente" ? "bg-danger" : "bg-secondary") ms-1">@demande.Priorite</span>
+                        </h6>
+                        <p>
+                            @demande.Description<br />
+                            <span class="text-muted">@demande.DateDemande.ToString("dd/MM/yyyy HH:mm")</span>
+                        </p>
+
+                        @if (demande.Interventions.Count > 0)
+                        {
+                            <ul class="list-group">
+                                @foreach (var intervention in demande.Interventions)
+                                {
+                                    <li class="list-group-item">
+                                        Intervention #@intervention.Id —
+                                        <span class="badge bg-secondary">@intervention.Statut</span>
+                                        — prévue le @intervention.DatePrevue.ToString("dd/MM/yyyy HH:mm")
+                                        <a href="/intervention/@intervention.Id" class="btn btn-sm btn-outline-secondary ms-2">Voir détails</a>
+
+                                        @if (intervention.CompteRendu is not null)
+                                        {
+                                            <div class="mt-1 small">
+                                                Résultat :
+                                                <span class="badge @(intervention.CompteRendu.Resultat == "Succes" ? "bg-success" : "bg-danger")">
+                                                    @intervention.CompteRendu.Resultat
+                                                </span>
+                                            </div>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    }
+}
+
+@code {
+    private List<EquipementDto>? _equipements;
+    private bool _isLoadingEquipements = true;
+    private string? _loadError;
+
+    private HistoriqueEquipementDto? _historique;
+    private bool _isLoadingHistorique;
+    private string? _historiqueError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var role = authState.User.FindFirst("role")?.Value
+                ?? authState.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+
+            var client = HttpClientFactory.CreateClient("Api");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+            HttpResponseMessage response;
+
+            if (role == "Client")
+            {
+                var clientIdClaim = authState.User.FindFirst("ClientId")?.Value;
+                if (clientIdClaim is null)
+                {
+                    _loadError = "Impossible de déterminer votre identifiant client.";
+                    return;
+                }
+                response = await client.GetAsync($"api/Equipements/{clientIdClaim}/equipements");
+            }
+            else
+            {
+                response = await client.GetAsync("api/Equipements");
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _loadError = "Impossible de charger les équipements.";
+                return;
+            }
+
+            _equipements = await response.Content.ReadFromJsonAsync<List<EquipementDto>>();
+        }
+        catch (Exception)
+        {
+            _loadError = "Une erreur est survenue lors du chargement.";
+        }
+        finally
+        {
+            _isLoadingEquipements = false;
+        }
+    }
+
+    private async Task OnEquipementSelectionne(ChangeEventArgs e)
+    {
+        _historique = null;
+        _historiqueError = null;
+
+        if (!int.TryParse(e.Value?.ToString(), out var equipementId) || equipementId == 0)
+            return;
+
+        _isLoadingHistorique = true;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("Api");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+            var response = await client.GetAsync($"api/Equipements/{equipementId}/historique");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var details = await response.Content.ReadAsStringAsync();
+                _historiqueError = $"Erreur : {details}";
+                return;
+            }
+
+            _historique = await response.Content.ReadFromJsonAsync<HistoriqueEquipementDto>();
+        }
+        catch (Exception)
+        {
+            _historiqueError = "Impossible de contacter le serveur.";
+        }
+        finally
+        {
+            _isLoadingHistorique = false;
+        }
+    }
+
+    private class EquipementDto
+    {
+        public int Id { get; set; }
+        public string Nom { get; set; } = string.Empty;
+        public string NumeroSerie { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Localisation { get; set; } = string.Empty;
+        public string Statut { get; set; } = string.Empty;
+    }
+
+    private class HistoriqueEquipementDto
+    {
+        public int EquipementId { get; set; }
+        public string Nom { get; set; } = string.Empty;
+        public string NumeroSerie { get; set; } = string.Empty;
+        public string Statut { get; set; } = string.Empty;
+        public List<HistoriqueDemandeDto> Demandes { get; set; } = new();
+    }
+
+    private class HistoriqueDemandeDto
+    {
+        public int Id { get; set; }
+        public string Description { get; set; } = string.Empty;
+        public DateTime DateDemande { get; set; }
+        public string Priorite { get; set; } = string.Empty;
+        public string Statut { get; set; } = string.Empty;
+        public List<HistoriqueInterventionDto> Interventions { get; set; } = new();
+    }
+
+    private class HistoriqueInterventionDto
+    {
+        public int Id { get; set; }
+        public DateTime DatePrevue { get; set; }
+        public string Statut { get; set; } = string.Empty;
+        public CompteRenduDto? CompteRendu { get; set; }
+    }
+
+    private class CompteRenduDto
+    {
+        public string OperationsEffectuees { get; set; } = string.Empty;
+        public string Observations { get; set; } = string.Empty;
+        public string Resultat { get; set; } = string.Empty;
+        public string? Recommandations { get; set; }
+    }
+}
