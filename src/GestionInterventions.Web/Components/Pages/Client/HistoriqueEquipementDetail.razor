@@ -1,0 +1,152 @@
+@page "/historique-equipement/{EquipementId:int}"
+@attribute [Authorize(Roles = "Client")]
+@using System.Net.Http.Json
+@using System.Net.Http.Headers
+@using Microsoft.AspNetCore.Authorization
+@using GestionInterventions.Web.Authentication
+@inject IHttpClientFactory HttpClientFactory
+@inject TokenProvider TokenProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Historique équipement</PageTitle>
+
+<button class="btn btn-outline-secondary mb-3" @onclick="Retour">← Retour</button>
+
+@if (_isLoading)
+{
+    <p>Chargement...</p>
+}
+else if (_errorMessage is not null)
+{
+    <div class="alert alert-danger">@_errorMessage</div>
+}
+else if (_historique is not null)
+{
+    <h1>Historique — @_historique.Nom (@_historique.NumeroSerie)</h1>
+
+    @if (_historique.Demandes.Count == 0)
+    {
+        <p>Aucune demande enregistrée pour cet équipement.</p>
+    }
+    else
+    {
+        @foreach (var demande in _historique.Demandes.OrderByDescending(d => d.DateDemande))
+        {
+            <div class="card mb-2">
+                <div class="card-body">
+                    <h6>
+                        Demande #@demande.Id
+                        <span class="badge bg-info text-dark ms-1">@demande.Statut</span>
+                        <span class="badge @(demande.Priorite == "Urgente" ? "bg-danger" : "bg-secondary") ms-1">@demande.Priorite</span>
+                    </h6>
+                    <p>
+                        @demande.Description<br />
+                        <span class="text-muted">@demande.DateDemande.ToString("dd/MM/yyyy HH:mm")</span>
+                    </p>
+
+                    @if (demande.Interventions.Count > 0)
+                    {
+                        <ul class="list-group">
+                            @foreach (var intervention in demande.Interventions)
+                            {
+                                <li class="list-group-item">
+                                    Intervention #@intervention.Id —
+                                    <span class="badge bg-secondary">@intervention.Statut</span>
+                                    — prévue le @intervention.DatePrevue.ToString("dd/MM/yyyy HH:mm")
+                                    <a href="/intervention/@intervention.Id" class="btn btn-sm btn-outline-secondary ms-2">Voir détails</a>
+
+                                    @if (intervention.CompteRendu is not null)
+                                    {
+                                        <div class="mt-1 small">
+                                            Résultat :
+                                            <span class="badge @(intervention.CompteRendu.Resultat == "Succes" ? "bg-success" : "bg-danger")">
+                                                @intervention.CompteRendu.Resultat
+                                            </span>
+                                        </div>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        }
+    }
+}
+
+@code {
+    [Parameter]
+    public int EquipementId { get; set; }
+
+    private HistoriqueEquipementDto? _historique;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("Api");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+            var response = await client.GetAsync($"api/Equipements/{EquipementId}/historique");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var details = await response.Content.ReadAsStringAsync();
+                _errorMessage = $"Erreur : {details}";
+                return;
+            }
+
+            _historique = await response.Content.ReadFromJsonAsync<HistoriqueEquipementDto>();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "Impossible de contacter le serveur.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void Retour()
+    {
+        Navigation.NavigateTo("/mes-equipements");
+    }
+
+    private class HistoriqueEquipementDto
+    {
+        public int EquipementId { get; set; }
+        public string Nom { get; set; } = string.Empty;
+        public string NumeroSerie { get; set; } = string.Empty;
+        public string Statut { get; set; } = string.Empty;
+        public List<HistoriqueDemandeDto> Demandes { get; set; } = new();
+    }
+
+    private class HistoriqueDemandeDto
+    {
+        public int Id { get; set; }
+        public string Description { get; set; } = string.Empty;
+        public DateTime DateDemande { get; set; }
+        public string Priorite { get; set; } = string.Empty;
+        public string Statut { get; set; } = string.Empty;
+        public List<HistoriqueInterventionDto> Interventions { get; set; } = new();
+    }
+
+    private class HistoriqueInterventionDto
+    {
+        public int Id { get; set; }
+        public DateTime DatePrevue { get; set; }
+        public string Statut { get; set; } = string.Empty;
+        public CompteRenduDto? CompteRendu { get; set; }
+    }
+
+    private class CompteRenduDto
+    {
+        public string OperationsEffectuees { get; set; } = string.Empty;
+        public string Observations { get; set; } = string.Empty;
+        public string Resultat { get; set; } = string.Empty;
+        public string? Recommandations { get; set; }
+    }
+}

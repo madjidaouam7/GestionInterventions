@@ -1,0 +1,120 @@
+@page "/clients/{ClientId:int}/equipements"
+@attribute [Authorize(Roles = "Responsable")]
+@using System.Net.Http.Json
+@using System.Net.Http.Headers
+@using Microsoft.AspNetCore.Authorization
+@using GestionInterventions.Web.Authentication
+@inject IHttpClientFactory HttpClientFactory
+@inject TokenProvider TokenProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Équipements du client</PageTitle>
+
+<button class="btn btn-outline-secondary mb-3" @onclick="Retour">← Retour</button>
+
+<h1>Équipements — Client #@ClientId</h1>
+
+@if (_isLoading)
+{
+    <p>Chargement...</p>
+}
+else if (_errorMessage is not null)
+{
+    <div class="alert alert-danger">@_errorMessage</div>
+}
+else if (_equipements is null || _equipements.Count == 0)
+{
+    <p>Ce client n'a aucun équipement enregistré.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nom</th>
+                <th>Numéro de série</th>
+                <th>Description</th>
+                <th>Localisation</th>
+                <th>Statut</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var equipement in _equipements)
+            {
+                <tr>
+                    <td>@equipement.Nom</td>
+                    <td>@equipement.NumeroSerie</td>
+                    <td>@equipement.Description</td>
+                    <td>@equipement.Localisation</td>
+                    <td><span class="badge @GetStatutBadgeClass(equipement.Statut)">@equipement.Statut</span></td>
+                    <td>
+                        <a href="/clients/@ClientId/equipements/@equipement.Id/historique"
+                           class="btn btn-sm btn-outline-secondary">
+                            Historique
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    [Parameter]
+    public int ClientId { get; set; }
+
+    private List<EquipementDto>? _equipements;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("Api");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+            var response = await client.GetAsync($"api/Equipements/{ClientId}/equipements");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = "Impossible de charger les équipements.";
+                return;
+            }
+
+            _equipements = await response.Content.ReadFromJsonAsync<List<EquipementDto>>();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "Une erreur est survenue lors du chargement.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void Retour()
+    {
+        Navigation.NavigateTo("/clients");
+    }
+
+    private static string GetStatutBadgeClass(string statut) => statut switch
+    {
+        "Fonctionnel" => "bg-success",
+        "EnPanne" => "bg-danger",
+        "EnMaintenance" => "bg-warning text-dark",
+        _ => "bg-secondary"
+    };
+
+    private class EquipementDto
+    {
+        public int Id { get; set; }
+        public string Nom { get; set; } = string.Empty;
+        public string NumeroSerie { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Localisation { get; set; } = string.Empty;
+        public string Statut { get; set; } = string.Empty;
+    }
+}

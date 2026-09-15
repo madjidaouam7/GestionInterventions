@@ -14,15 +14,15 @@
                     @(topbarContext.User.FindFirst("Nom")?.Value ??
                     topbarContext.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value)
                 </span>
-                <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleMenu">?</button>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleMenu">‚è∑</button>
 
                 <div class="user-dropdown @(_menuOuvert ? "show" : "")">
                     <AuthorizeView Roles="Client" Context="dropdownContext">
                         <Authorized>
-                            <a href="/modifier-coordonnÈes">Modifier mes coordonnÈes</a>
+                            <a href="/modifier-coordonnees">Modifier mes coordonn√©es</a>
                         </Authorized>
                     </AuthorizeView>
-                    <button @onclick="HandleLogout">Se dÈconnecter</button>
+                    <button @onclick="HandleLogout">Se d√©connecter</button>
                 </div>
             </div>
         </Authorized>

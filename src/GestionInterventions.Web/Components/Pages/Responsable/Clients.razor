@@ -33,6 +33,7 @@ else
                 <th>Email</th>
                 <th>Téléphone</th>
                 <th>Adresse</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -44,6 +45,11 @@ else
                     <td>@client.Email</td>
                     <td>@client.Telephone</td>
                     <td>@client.Adresse</td>
+                    <td>
+                        <a href="/clients/@client.Id/equipements" class="btn btn-sm btn-outline-primary">
+                            Voir équipements
+                        </a>
+                    </td>
                 </tr>
             }
         </tbody>
