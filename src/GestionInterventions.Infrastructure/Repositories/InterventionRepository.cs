@@ -36,9 +36,13 @@ public class InterventionRepository : IInterventionRepository
 
     public async Task<List<Intervention>> GetByTechnicienIdAsync(int technicienId, CancellationToken cancellationToken)
     {
-        return await _context.Interventions.Where(i => i.TechnicienId == technicienId)
-                                           .Include(i => i.Technicien)
-                                           .ToListAsync(cancellationToken);
+        return await _context.Interventions
+            .Where(i => i.TechnicienId == technicienId)
+            .OrderByDescending(i => i.DatePrevue)
+            .Include(i => i.Technicien)
+            .Include(i => i.Demande)
+            .ThenInclude(d => d.Equipement)
+            .ToListAsync(cancellationToken);
     }
 
 

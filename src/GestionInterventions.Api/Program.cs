@@ -12,6 +12,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
 using GestionInterventions.Api.Services;
+using GestionInterventions.Infrastructure.Persistence.Repositories;
+using GestionInterventions.Infrastructure.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -153,6 +155,8 @@ builder.Services.AddScoped<IInterventionRepository, InterventionRepository>();
 builder.Services.AddScoped<IIdentityService, IdentityService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<IAdminConfiguration, AdminConfiguration>();
 
 var app = builder.Build();
 

@@ -1,15 +1,24 @@
 @page "/mes-interventions"
 @attribute [Authorize(Roles = "Technicien")]
-@using System.Net.Http.Json
+@implements IDisposable
 @using System.Net.Http.Headers
-@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@using GestionInterventions.Application.Common.Models
 @using GestionInterventions.Web.Authentication
+@using GestionInterventions.Web.Services
+@using Microsoft.AspNetCore.Authorization
 @inject IHttpClientFactory HttpClientFactory
 @inject TokenProvider TokenProvider
+@inject TechnicienNotificationStateService TechnicienNotificationStateService
 
 <PageTitle>Mes interventions</PageTitle>
 
-<h1>Mes interventions</h1>
+<div class="interventions-header">
+    <div>
+        <h1>Mes interventions</h1>
+        <p class="text-muted mb-0">Gérez les interventions qui vous sont attribuées.</p>
+    </div>
+</div>
 
 @if (_isLoading)
 {
@@ -19,93 +28,177 @@ else if (_errorMessage is not null)
 {
     <div class="alert alert-danger">@_errorMessage</div>
 }
-else if (_interventions is null || _interventions.Count == 0)
+else if (_interventions is null)
 {
     <p>Vous n'avez aucune intervention assignée.</p>
 }
 else
 {
-    @foreach (var intervention in _interventions.OrderBy(i => i.DatePrevue))
+    <div class="intervention-filters" role="group" aria-label="Filtrer les interventions">
+        @foreach (var filter in Filters)
+        {
+            <button type="button" class="btn @(IsActiveFilter(filter.Key) ? "btn-primary" : "btn-outline-secondary")"
+                    aria-pressed="@IsActiveFilter(filter.Key)" @onclick="() => SetFilter(filter.Key)">
+                @filter.Value (@CountForFilter(filter.Key))
+                @if (filter.Key == "Afaire" && TechnicienNotificationStateService.ShowAfaireNotificationBadge)
+                {
+                    <span class="new-filter-indicator" aria-label="Nouvelles interventions non consultées"></span>
+                }
+            </button>
+        }
+    </div>
+
+    var filteredInterventions = GetFilteredInterventions().ToList();
+    @if (filteredInterventions.Count == 0)
     {
-        <div class="card mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Intervention #@intervention.Id</h5>
-                <p class="card-text">
-                    Date prévue : @intervention.DatePrevue.ToString("dd/MM/yyyy HH:mm")<br />
-                    Statut : <span class="badge @GetStatutBadgeClass(intervention.Statut)">@intervention.Statut</span>
-                </p>
-                <a href="/intervention/@intervention.Id" class="btn btn-sm btn-outline-secondary ms-2">Voir détails</a>
-
-                @if (_actionError is not null && _actionErrorInterventionId == intervention.Id)
-                {
-                    <div class="alert alert-danger">@_actionError</div>
-                }
-
-                @if (intervention.Statut == "Planifiee")
-                {
-                    <button class="btn btn-primary" @onclick="() => HandleCommencer(intervention.Id)" disabled="@_isProcessing">
-                        Commencer
-                    </button>
-                }
-                else if (intervention.Statut == "EnCours")
-                {
-                    @if (_interventionEnEditionId == intervention.Id)
-                    {
-                        <EditForm Model="_compteRenduModel" OnValidSubmit="() => HandleTerminer(intervention.Id)">
-                            <DataAnnotationsValidator />
-
-                            <div class="mb-2">
-                                <label>Opérations effectuées</label>
-                                <InputTextArea class="form-control" rows="3" @bind-Value="_compteRenduModel.OperationsEffectuees" />
-                            </div>
-
-                            <div class="mb-2">
-                                <label>Observations</label>
-                                <InputTextArea class="form-control" rows="2" @bind-Value="_compteRenduModel.Observations" />
-                            </div>
-
-                            <div class="mb-2">
-                                <label>Résultat</label>
-                                <InputSelect class="form-select" @bind-Value="_compteRenduModel.Resultat">
-                                    <option value="Succes">Succès</option>
-                                    <option value="Echec">Échec — nouvelle intervention nécessaire</option>
-                                </InputSelect>
-                            </div>
-
-                            <div class="mb-2">
-                                <label>Recommandations (optionnel)</label>
-                                <InputTextArea class="form-control" rows="2" @bind-Value="_compteRenduModel.Recommandations" />
-                            </div>
-
-                            <button type="submit" class="btn btn-success" disabled="@_isProcessing">
-                                @(_isProcessing ? "Envoi..." : "Valider la fin d'intervention")
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary ms-2" @onclick="AnnulerEdition">
-                                Annuler
-                            </button>
-                        </EditForm>
-                    }
-                    else
-                    {
-                        <button class="btn btn-success" @onclick="() => OuvrirCompteRendu(intervention.Id)">
-                            Terminer
-                        </button>
-                    }
-                }
-                else if (intervention.CompteRendu is not null)
-                {
-                    <div class="mt-2 small text-muted">
-                        Résultat : @intervention.CompteRendu.Resultat
-                        @if (!string.IsNullOrWhiteSpace(intervention.CompteRendu.Recommandations))
-                        {
-                            <br />
-                            <text>Recommandations : @intervention.CompteRendu.Recommandations</text>
-                        }
-                    </div>
-                }
-            </div>
-        </div>
+        <p class="text-muted intervention-empty">Aucune intervention ne correspond à ce filtre.</p>
     }
+    else
+    {
+        <div class="interventions-table-wrapper">
+            <table class="table interventions-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Intervention</th>
+                        <th scope="col">Équipement</th>
+                        <th scope="col">Date prévue</th>
+                        <th scope="col">Statut</th>
+                        <th scope="col" class="interventions-actions-heading">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var intervention in filteredInterventions.OrderByDescending(i => i.Id))
+                    {
+                        <tr class="@(EstNouvelleIntervention(intervention.Id) ? "nouvelle-intervention" : "")">
+                            <td data-label="Intervention" class="intervention-number">#@intervention.Id</td>
+                            <td data-label="Équipement" class="text">@intervention.EquipementNom</td>
+                            <td data-label="Date prévue">@intervention.DatePrevue.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td data-label="Statut"><span
+                                class="badge @GetStatutBadgeClass(intervention.Statut)">@GetStatutLabel(intervention.Statut)</span>
+                            </td>
+                            <td data-label="Actions" class="interventions-actions">
+                                @if (intervention.Statut == "Planifiee")
+                                {
+                                    <button class="btn btn-sm btn-primary" @onclick="() => HandleCommencer(intervention.Id)"
+                                            disabled="@_isProcessing">@(_isProcessing && _processingInterventionId == intervention.Id ? "En cours..." : "Commencer")</button>
+                                }
+                                else if (intervention.Statut == "EnCours")
+                                {
+                                    <button class="btn btn-sm btn-success" @onclick="() => OuvrirCompteRendu(intervention.Id)"
+                                            disabled="@_isProcessing">Terminer</button>
+                                }
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        @onclick="() => OuvrirDetails(intervention)">Voir détails</button>
+
+                                @if (EstNouvelleIntervention(intervention.Id))
+                                {
+                                    <span class="new-intervention-indicator" aria-label="Nouvelle intervention"></span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+    }
+}
+
+@if (_interventionDetails is not null)
+{
+    <Modal Titre="Détails de l'intervention" Visible="true" OnClose="FermerDetails">
+        <div class="intervention-details-main">
+            <dl class="intervention-details-column">
+                <div class="detail-item">
+                    <dt>Équipement</dt>
+                    <dd>@_interventionDetails.EquipementNom</dd>
+                </div>
+                <div class="detail-item">
+                    <dt>Problème / description</dt>
+                    <dd>@_interventionDetails.DescriptionDemande</dd>
+                </div>
+                <div class="detail-item">
+                    <dt>Date prévue</dt>
+                    <dd>@_interventionDetails.DatePrevue.ToString("dd/MM/yyyy HH:mm")</dd>
+                </div>
+            </dl>
+            <dl class="intervention-details-column">
+                <div class="detail-item">
+                    <dt>Intervention ID</dt>
+                    <dd>#@_interventionDetails.Id</dd>
+                </div>
+                <div class="detail-item">
+                    <dt>Demande ID</dt>
+                    <dd>#@_interventionDetails.DemandeId</dd>
+                </div>
+                <div class="detail-item">
+                    <dt>Statut</dt>
+                    <dd><span
+                        class="badge @GetStatutBadgeClass(_interventionDetails.Statut)">@GetStatutLabel(_interventionDetails.Statut)</span>
+                    </dd>
+                </div>
+            </dl>
+        </div>
+
+        <div class="intervention-details-divider" role="separator"></div>
+
+        <h3 class="intervention-report-title">Compte rendu</h3>
+        @if (_interventionDetails.CompteRendu is null)
+        {
+            <p class="text-muted intervention-report-empty">Aucun compte rendu disponible.</p>
+        }
+        else
+        {
+            <dl class="intervention-details intervention-report">
+                <div>
+                    <dt>Opérations effectuées</dt>
+                    <dd>@DisplayOrFallback(_interventionDetails.CompteRendu.OperationsEffectuees)</dd>
+                </div>
+                <div>
+                    <dt>Observations</dt>
+                    <dd>@DisplayOrFallback(_interventionDetails.CompteRendu.Observations)</dd>
+                </div>
+                <div>
+                    <dt>Résultat</dt>
+                    <dd>@_interventionDetails.CompteRendu.Resultat</dd>
+                </div>
+                <div>
+                    <dt>Recommandations</dt>
+                    <dd>@DisplayOrFallback(_interventionDetails.CompteRendu.Recommandations)</dd>
+                </div>
+            </dl>
+        }
+    </Modal>
+}
+
+@if (_interventionEnEditionId is not null)
+{
+    <Modal Titre="Terminer l'intervention" Visible="true" OnClose="AnnulerEdition">
+        <EditForm Model="_compteRenduModel" OnValidSubmit="() => HandleTerminer(_interventionEnEditionId.Value)">
+            <DataAnnotationsValidator />
+            <div class="mb-2"><label>Opérations effectuées</label>
+                <InputTextArea class="form-control" rows="3" @bind-Value="_compteRenduModel.OperationsEffectuees" />
+            </div>
+            <div class="mb-2"><label>Observations</label>
+                <InputTextArea class="form-control" rows="2" @bind-Value="_compteRenduModel.Observations" />
+            </div>
+            <div class="mb-2"><label>Résultat</label>
+                <InputSelect class="form-select" @bind-Value="_compteRenduModel.Resultat">
+                    <option value="Succes">Succès</option>
+                    <option value="Echec">Échec — nouvelle intervention nécessaire</option>
+                </InputSelect>
+            </div>
+            <div class="mb-2"><label>Recommandations (optionnel)</label>
+                <InputTextArea class="form-control" rows="2" @bind-Value="_compteRenduModel.Recommandations" />
+            </div>
+            @if (_actionError is not null && _actionErrorInterventionId == _interventionEnEditionId)
+            {
+                <div class="alert alert-danger">@_actionError</div>
+            }
+            <button type="submit" class="btn btn-success" disabled="@_isProcessing">@(_isProcessing ? "Envoi..." : "Valider la fin d'intervention")</button>
+            <button type="button" class="btn btn-outline-secondary ms-2" @onclick="AnnulerEdition">Annuler</button>
+        </EditForm>
+    </Modal>
 }
 
 @code {
@@ -113,6 +206,9 @@ else
     private bool _isLoading = true;
     private string? _errorMessage;
     private bool _isProcessing;
+    private int? _processingInterventionId;
+    private string _activeFilter = "Toutes";
+    private InterventionDto? _interventionDetails;
 
     private int? _interventionEnEditionId;
     private CompteRenduModel _compteRenduModel = new();
@@ -120,9 +216,45 @@ else
     private string? _actionError;
     private int? _actionErrorInterventionId;
 
+    [SupplyParameterFromQuery(Name = "filter")]
+    public string? Filter { get; set; }
+
+    private static readonly IReadOnlyDictionary<string, string> Filters = new Dictionary<string, string>
+    {
+        ["Toutes"] = "Toutes",
+        ["Afaire"] = "À faire",
+        ["EnCours"] = "En cours",
+        ["Terminees"] = "Terminées"
+    };
+
+    protected override void OnInitialized()
+    {
+        TechnicienNotificationStateService.OnStateChanged += HandleTechnicienNotificationStateChanged;
+
+        if (Filter == "afaire")
+            _activeFilter = "Afaire";
+        else if (Filter == "encours")
+            _activeFilter = "EnCours";
+        else if (Filter == "termine")
+            _activeFilter = "Terminees";
+        else
+            _activeFilter = "Toutes";
+    }
+
+    public void Dispose()
+    {
+        TechnicienNotificationStateService.OnStateChanged -= HandleTechnicienNotificationStateChanged;
+        TechnicienNotificationStateService.ClearNewInterventionIds();
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await ChargerInterventions();
+    }
+
+    private void HandleTechnicienNotificationStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
     }
 
     private async Task ChargerInterventions()
@@ -137,11 +269,17 @@ else
 
             if (!response.IsSuccessStatusCode)
             {
-                _errorMessage = "Impossible de charger vos interventions.";
+                _errorMessage = await ApiErrorMessageReader.ReadAsync(response, "Impossible de charger vos interventions.");
                 return;
             }
 
-            _interventions = await response.Content.ReadFromJsonAsync<List<InterventionDto>>();
+            var result = await response.Content.ReadFromJsonAsync<List<InterventionDto>>();
+
+            if (result is not null)
+            {
+                _interventions = result;
+            }
+
         }
         catch (Exception)
         {
@@ -153,9 +291,16 @@ else
         }
     }
 
+    private bool EstNouvelleIntervention(int interventionId)
+    {
+        return TechnicienNotificationStateService.NewInterventionIds
+            .Contains(interventionId);
+    }
+
     private async Task HandleCommencer(int interventionId)
     {
         _isProcessing = true;
+        _processingInterventionId = interventionId;
         _actionError = null;
 
         try
@@ -167,12 +312,12 @@ else
 
             if (!response.IsSuccessStatusCode)
             {
-                var details = await response.Content.ReadAsStringAsync();
-                _actionError = $"Erreur : {details}";
+                _actionError = await ApiErrorMessageReader.ReadAsync(response, "Impossible de commencer l'intervention.");
                 _actionErrorInterventionId = interventionId;
                 return;
             }
 
+            TechnicienNotificationStateService.ClearNewInterventionIds();
             await ChargerInterventions();
         }
         catch (Exception)
@@ -183,6 +328,7 @@ else
         finally
         {
             _isProcessing = false;
+            _processingInterventionId = null;
         }
     }
 
@@ -195,11 +341,14 @@ else
     private void AnnulerEdition()
     {
         _interventionEnEditionId = null;
+        _actionError = null;
+        _actionErrorInterventionId = null;
     }
 
     private async Task HandleTerminer(int interventionId)
     {
         _isProcessing = true;
+        _processingInterventionId = interventionId;
         _actionError = null;
 
         try
@@ -217,13 +366,13 @@ else
 
             if (!response.IsSuccessStatusCode)
             {
-                var details = await response.Content.ReadAsStringAsync();
-                _actionError = $"Erreur : {details}";
+                _actionError = await ApiErrorMessageReader.ReadAsync(response, "Une erreur est survenue lors de l'ajout.");
                 _actionErrorInterventionId = interventionId;
                 return;
             }
 
             _interventionEnEditionId = null;
+            TechnicienNotificationStateService.ClearNewInterventionIds();
             await ChargerInterventions();
         }
         catch (Exception)
@@ -234,8 +383,78 @@ else
         finally
         {
             _isProcessing = false;
+            _processingInterventionId = null;
         }
     }
+
+
+    private IEnumerable<InterventionDto> GetFilteredInterventions()
+    {
+        var interventions = _interventions ?? Enumerable.Empty<InterventionDto>();
+        var filtered = _activeFilter switch
+        {
+            "Afaire" => interventions.Where(i => i.Statut == "Planifiee"),
+            "EnCours" => interventions.Where(i => i.Statut == "EnCours"),
+            "Terminees" => interventions.Where(i => i.Statut is "Terminee" or "Cloturee"),
+            _ => interventions
+        };
+
+        return filtered.OrderBy(i => i.DatePrevue);
+    }
+
+    private int CountForFilter(string filter) => filter switch
+    {
+        "Afaire" => _interventions?.Count(i => i.Statut == "Planifiee") ?? 0,
+        "EnCours" => _interventions?.Count(i => i.Statut == "EnCours") ?? 0,
+        "Terminees" => _interventions?.Count(i => i.Statut is "Terminee" or "Cloturee") ?? 0,
+        _ => _interventions?.Count ?? 0
+    };
+
+    private bool IsActiveFilter(string filter) => _activeFilter == filter;
+
+    private async Task SetFilter(string filter)
+    {
+        _activeFilter = filter;
+
+        if (filter == "Afaire")
+        {
+            try
+            {
+                await TokenProvider.LoadTokenAsync();
+                if (!string.IsNullOrWhiteSpace(TokenProvider.Token))
+                {
+                    var client = HttpClientFactory.CreateClient("Api");
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+                    var response = await client.PutAsync("api/Notifications/read?type=NouvelleIntervention", null);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        TechnicienNotificationStateService.MarkAfaireNotificationsAsRead();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Impossible de marquer les notifications comme lues, mais le comportement visuel reste cohérent.
+            }
+        }
+    }
+
+    private void OuvrirDetails(InterventionDto intervention) => _interventionDetails = intervention;
+
+    private void FermerDetails() => _interventionDetails = null;
+
+    private static string DisplayOrFallback(string? value) => string.IsNullOrWhiteSpace(value) ? "Non renseigné" : value;
+
+    private static string GetStatutLabel(string statut) => statut switch
+    {
+        "Planifiee" => "Planifiée",
+        "EnCours" => "En cours",
+        "Terminee" => "Terminée",
+        "Cloturee" => "Clôturée",
+        _ => statut
+    };
 
     private static string GetStatutBadgeClass(string statut) => statut switch
     {
@@ -246,12 +465,24 @@ else
         _ => "bg-secondary"
     };
 
+
     private class CompteRenduModel
     {
         public string OperationsEffectuees { get; set; } = string.Empty;
         public string Observations { get; set; } = string.Empty;
         public string Resultat { get; set; } = "Succes";
         public string? Recommandations { get; set; }
+    }
+
+    private class NotificationDto
+    {
+        public int Id { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public DateTime DateCreation { get; set; }
+        public bool EstLue { get; set; }
+        public int? DemandeId { get; set; }
+        public int? InterventionId { get; set; }
     }
 
     private class InterventionDto
@@ -261,6 +492,8 @@ else
         public int DemandeId { get; set; }
         public int TechnicienId { get; set; }
         public string TechnicienNom { get; set; } = string.Empty;
+        public string EquipementNom { get; set; } = string.Empty;
+        public string DescriptionDemande { get; set; } = string.Empty;
         public string Statut { get; set; } = string.Empty;
         public CompteRenduDto? CompteRendu { get; set; }
     }
@@ -272,4 +505,10 @@ else
         public string Resultat { get; set; } = string.Empty;
         public string? Recommandations { get; set; }
     }
+
+    private class ErrorResponse
+    {
+        public string Error { get; set; } = string.Empty;
+    }
+
 }

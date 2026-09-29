@@ -9,4 +9,6 @@ public interface IIdentityService
 
     Task<(bool Succeeded, string? UserId, string? Email, string? Role)>
         LoginAsync(string email, string password);
+
+    Task<string?> GetUserIdByEmailAsync(string email);
 }

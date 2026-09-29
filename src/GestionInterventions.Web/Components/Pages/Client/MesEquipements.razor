@@ -5,6 +5,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Net.Http.Headers
+@using GestionInterventions.Application.Common.Models
 @inject IHttpClientFactory HttpClientFactory
 @inject AuthenticationStateProvider AuthStateProvider
 @inject GestionInterventions.Web.Authentication.TokenProvider TokenProvider
@@ -17,51 +18,49 @@
     @(_afficherFormulaire ? "Annuler" : "Ajouter un équipement")
 </button>
 
-@if (_afficherFormulaire)
-{
-    <div class="card mb-3">
-        <div class="card-body">
-            <EditForm Model="_formModel" OnValidSubmit="HandleSubmit">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
+<Modal Titre="Ajouter un équipement" Visible="@_afficherFormulaire" OnClose="FermerFormulaire">
+    <EditForm Model="_formModel" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
 
-                <div class="mb-3">
-                    <label>Nom</label>
-                    <InputText class="form-control" @bind-Value="_formModel.Nom" />
-                </div>
-
-                <div class="mb-3">
-                    <label>Numéro de série</label>
-                    <InputText class="form-control" @bind-Value="_formModel.NumeroSerie" />
-                </div>
-
-                <div class="mb-3">
-                    <label>Description</label>
-                    <InputTextArea class="form-control" rows="3" @bind-Value="_formModel.Description" />
-                </div>
-
-                <div class="mb-3">
-                    <label>Localisation</label>
-                    <InputText class="form-control" @bind-Value="_formModel.Localisation" />
-                </div>
-
-                @if (!string.IsNullOrEmpty(_errorMessage))
-                {
-                    <div class="alert alert-danger">@_errorMessage</div>
-                }
-
-                @if (_success)
-                {
-                    <div class="alert alert-success">Équipement ajouté avec succès.</div>
-                }
-
-                <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
-                    @(_isSubmitting ? "Ajout..." : "Ajouter l'équipement")
-                </button>
-            </EditForm>
+        <div class="mb-3">
+            <label>Nom</label>
+            <InputText class="form-control" @bind-Value="_formModel.Nom" />
         </div>
-    </div>
-}
+
+        <div class="mb-3">
+            <label>Numéro de série</label>
+            <InputText class="form-control" @bind-Value="_formModel.NumeroSerie" />
+        </div>
+
+        <div class="mb-3">
+            <label>Description</label>
+            <InputTextArea class="form-control" rows="3" @bind-Value="_formModel.Description" />
+        </div>
+
+        <div class="mb-3">
+            <label>Localisation</label>
+            <InputText class="form-control" @bind-Value="_formModel.Localisation" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="alert alert-danger">@_errorMessage</div>
+        }
+
+        @if (_success)
+        {
+            <div class="alert alert-success">Équipement ajouté avec succès.</div>
+        }
+
+        <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
+            @(_isSubmitting ? "Ajout..." : "Ajouter l'équipement")
+        </button>
+        <button type="button" class="btn btn-outline-secondary ms-2" @onclick="FermerFormulaire">
+            Annuler
+        </button>
+    </EditForm>
+</Modal>
 
 @if (_isLoading)
 {
@@ -106,6 +105,48 @@ else
             }
         </tbody>
     </table>
+
+    @if (_totalPages > 1)
+    {
+        <div class="d-flex justify-content-center align-items-center gap-2 mt-4 mb-4">
+            <button class="btn btn-outline-primary" @onclick="PagePrecedente" disabled="@(_page == 1)">
+                ← Précédente
+            </button>
+
+            <button class="btn @(_page == 1 ? "btn-primary" : "btn-outline-primary")" @onclick="() => AllerAPage(1)">
+                1
+            </button>
+
+            @if (_page > 3)
+            {
+                <span class="px-1">...</span>
+            }
+
+            @for (int i = Math.Max(2, _page - 1); i <= Math.Min(_totalPages - 1, _page + 1); i++)
+            {
+                var pageNumber = i;
+
+                <button class="btn @(_page == pageNumber ? "btn-primary" : "btn-outline-primary")"
+                        @onclick="() => AllerAPage(pageNumber)">
+                    @pageNumber
+                </button>
+            }
+
+            @if (_page < _totalPages - 2)
+            {
+                <span class="px-1">...</span>
+            }
+
+            <button class="btn @(_page == _totalPages ? "btn-primary" : "btn-outline-primary")"
+                    @onclick="() => AllerAPage(_totalPages)">
+                @_totalPages
+            </button>
+
+            <button class="btn btn-outline-primary" @onclick="PageSuivante" disabled="@(_page == _totalPages)">
+                Suivante →
+            </button>
+        </div>
+    }
 }
 
 @code {
@@ -115,8 +156,10 @@ else
     private bool _isSubmitting;
     private bool _isLoading = true;
     private string? _errorMessage;
-    private bool _hasLoaded;
     private bool _success;
+    private int _page = 1;
+    private const int _pageSize = 5;
+    private int _totalPages;
 
 
     private void ToggleFormulaire()
@@ -125,6 +168,12 @@ else
         _errorMessage = null;
         if (_afficherFormulaire)
             _formModel = new FormModel();
+    }
+
+    private void FermerFormulaire()
+    {
+        _afficherFormulaire = false;
+        _errorMessage = null;
     }
 
     private async Task HandleSubmit()
@@ -159,8 +208,7 @@ else
 
             if (!response.IsSuccessStatusCode)
             {
-                var details = await response.Content.ReadAsStringAsync();
-                _errorMessage = $"Erreur lors de l'ajout : {details}";
+                _errorMessage = await ApiErrorMessageReader.ReadAsync(response, "Une erreur est survenue lors de l'ajout.");
                 return;
             }
 
@@ -195,16 +243,21 @@ else
             client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
 
-            var response = await client.GetAsync($"api/Equipements/{clientIdClaim}/equipements");
+            var response = await client.GetAsync($"api/Equipements/{clientIdClaim}/equipements?page={_page}&pageSize={_pageSize}");
 
             if (!response.IsSuccessStatusCode)
             {
-                var details = await response.Content.ReadAsStringAsync();
-                _errorMessage = $"Erreur API : {(int)response.StatusCode} {response.StatusCode}. {details}";
+                _errorMessage = await ApiErrorMessageReader.ReadAsync(response, "Impossible de charger vos équipements.");
                 return;
             }
 
-            _equipements = await response.Content.ReadFromJsonAsync<List<EquipementDto>>();
+            var result = await response.Content.ReadFromJsonAsync<PagedResult<EquipementDto>>();
+
+            if (result is not null)
+            {
+                _equipements = result.Items;
+                _totalPages = result.TotalPages;
+            }
         }
         catch (Exception)
         {
@@ -214,6 +267,38 @@ else
         {
             _isLoading = false;
         }
+    }
+
+    private async Task PagePrecedente()
+    {
+        if (_page > 1)
+        {
+            _page--;
+            await ChargerEquipements();
+        }
+    }
+
+    private async Task PageSuivante()
+    {
+        if (_page < _totalPages)
+        {
+            _page++;
+            await ChargerEquipements();
+        }
+    }
+
+    private async Task AllerAPage(int page)
+    {
+        if (page < 1 || page > _totalPages || page == _page)
+            return;
+
+        _page = page;
+        await ChargerEquipements();
+    }
+
+    private async Task ChargerEquipements()
+    {
+        await OnInitializedAsync();
     }
 
     private static string GetStatutEquipementBadgeClass(string statut) => statut switch
@@ -240,5 +325,10 @@ else
         public string NumeroSerie { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string Localisation { get; set; } = string.Empty;
+    }
+
+    private class ErrorResponse
+    {
+        public string Error { get; set; } = string.Empty;
     }
 }

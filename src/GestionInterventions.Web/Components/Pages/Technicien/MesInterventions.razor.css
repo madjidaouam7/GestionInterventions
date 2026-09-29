@@ -1,0 +1,225 @@
+.interventions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    margin-bottom: 1.25rem;
+}
+
+.intervention-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    margin-bottom: 1rem;
+}
+
+.interventions-table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--bs-border-color);
+    border-radius: .375rem;
+}
+
+.interventions-table {
+    min-width: 47rem;
+    margin-bottom: 0;
+    vertical-align: middle;
+}
+
+.interventions-table th {
+    padding: .7rem .85rem;
+    color: var(--bs-secondary-color);
+    font-size: .78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    white-space: nowrap;
+}
+
+.interventions-table td {
+    padding: .75rem .85rem;
+}
+
+.intervention-number {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.interventions-actions-heading,
+.interventions-actions {
+    text-align: right;
+}
+
+.interventions-actions {
+    white-space: nowrap;
+}
+
+.interventions-actions .btn+.btn {
+    margin-left: .35rem;
+}
+
+.intervention-empty {
+    padding: 1rem 0;
+}
+
+.new-filter-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-left: 8px;
+    background-color: #dc3545;
+    border-radius: 50%;
+    vertical-align: middle;
+    box-shadow: 0 0 0 1px rgba(220, 53, 69, 0.25);
+}
+
+.intervention-details-main {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+}
+
+.intervention-details-column,
+.intervention-details {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin: 0;
+}
+
+.intervention-details-main .detail-item,
+.intervention-details div {
+    min-width: 0;
+}
+
+.intervention-details-main dt,
+.intervention-details dt {
+    color: var(--bs-secondary-color);
+    font-weight: 700;
+}
+
+.intervention-details-main dd,
+.intervention-details dd {
+    margin: .15rem 0 0;
+    overflow-wrap: anywhere;
+    font-weight: 400;
+}
+
+.detail-item {
+    display: block;
+}
+
+.intervention-details-divider {
+    height: 1px;
+    margin: 1.5rem 0 1.25rem;
+    background-color: #adb3ba;
+}
+
+.intervention-report-title {
+    margin: 0 0 1.25rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.intervention-report {
+    grid-template-columns: 1fr;
+}
+
+.intervention-report-empty {
+    margin-bottom: 0;
+}
+
+.interventions-actions {
+    white-space: nowrap;
+}
+
+.new-intervention-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    min-width: 8px;
+    margin-left: 10px;
+    border-radius: 50%;
+    background-color: #dc3545;
+    vertical-align: middle;
+    box-shadow: 0 0 0 1px rgba(220, 53, 69, 0.25);
+}
+
+@media (max-width: 767.98px) {
+    .interventions-table-wrapper {
+        overflow: visible;
+        border: 0;
+    }
+
+    .interventions-table {
+        min-width: 0;
+    }
+
+    .interventions-table thead {
+        display: none;
+    }
+
+    .interventions-table,
+    .interventions-table tbody,
+    .interventions-table tr,
+    .interventions-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .interventions-table tr {
+        padding: .85rem;
+        border: 1px solid var(--bs-border-color);
+        border-radius: .375rem;
+    }
+
+    .interventions-table tr+tr {
+        margin-top: .65rem;
+    }
+
+    .interventions-table td {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: .2rem 0;
+        border: 0;
+        text-align: right;
+    }
+
+    .interventions-table td::before {
+        content: attr(data-label);
+        color: var(--bs-secondary-color);
+        font-size: .8rem;
+        font-weight: 600;
+        text-align: left;
+    }
+
+    .interventions-table td.intervention-number {
+        display: block;
+        padding-bottom: .35rem;
+        font-size: 1.05rem;
+        text-align: left;
+    }
+
+    .interventions-table td.intervention-number::before {
+        display: none;
+    }
+
+    .interventions-actions {
+        display: flex !important;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        padding-top: .65rem !important;
+        margin-top: .35rem;
+        border-top: 1px solid var(--bs-border-color) !important;
+    }
+
+    .interventions-actions::before {
+        margin-right: auto;
+    }
+
+    .intervention-details-main {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}

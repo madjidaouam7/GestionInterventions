@@ -1,0 +1,63 @@
+.intervention-details-main {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+}
+
+.intervention-details-column,
+.intervention-details {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin: 0;
+}
+
+.intervention-details-main .detail-item,
+.intervention-details div {
+    min-width: 0;
+}
+
+.intervention-details-main dt,
+.intervention-details dt {
+    color: var(--bs-secondary-color);
+    font-weight: 700;
+}
+
+.intervention-details-main dd,
+.intervention-details dd {
+    margin: .15rem 0 0;
+    overflow-wrap: anywhere;
+    font-weight: 400;
+}
+
+.detail-item {
+    display: block;
+}
+
+.intervention-details-divider {
+    height: 1px;
+    margin: 1.5rem 0 1.25rem;
+    background-color: #adb3ba;
+}
+
+.intervention-report-title {
+    margin: 0 0 1.25rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.intervention-report {
+    grid-template-columns: 1fr;
+}
+
+.intervention-report-empty {
+    margin-bottom: 0;
+}
+
+@media (max-width: 767.98px) {
+    .intervention-details-main {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}

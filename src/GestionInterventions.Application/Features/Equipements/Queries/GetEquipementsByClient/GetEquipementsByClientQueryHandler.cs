@@ -1,5 +1,6 @@
 using GestionInterventions.Application.Common.Exceptions;
 using GestionInterventions.Application.Common.Interfaces;
+using GestionInterventions.Application.Common.Models;
 using GestionInterventions.Application.DTOs;
 using GestionInterventions.Domain.Entities;
 using GestionInterventions.Domain.Exceptions;
@@ -7,7 +8,7 @@ using MediatR;
 
 namespace GestionInterventions.Application.Features.Equipements.Queries.GetEquipementsByClient;
 
-public class GetEquipementsByClientQueryHandler : IRequestHandler<GetEquipementsByClientQuery, List<EquipementDto>>
+public class GetEquipementsByClientQueryHandler : IRequestHandler<GetEquipementsByClientQuery, PagedResult<EquipementDto>>
 {
     private readonly IEquipementRepository _equipementRepository;
     private readonly IClientRepository _clientRepository;
@@ -21,7 +22,7 @@ public class GetEquipementsByClientQueryHandler : IRequestHandler<GetEquipements
         _currentUserService = currentUserService;
     }
 
-    public async Task<List<EquipementDto>> Handle(GetEquipementsByClientQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<EquipementDto>> Handle(GetEquipementsByClientQuery request, CancellationToken cancellationToken)
     {
         var client = await _clientRepository.GetByIdAsync(request.ClientId, cancellationToken);
 
@@ -29,7 +30,7 @@ public class GetEquipementsByClientQueryHandler : IRequestHandler<GetEquipements
             throw new NotFoundException("Le client spécifié n'existe pas.");
 
 
-        var equipements = await _equipementRepository.GetByClientIdAsync(request.ClientId, cancellationToken);
+        var (equipements, totalCount) = await _equipementRepository.GetByClientIdAsync(request.ClientId, request.Page, request.PageSize, cancellationToken);
 
         // Un Client ne peut consulter que ses propre equipements
         if (_currentUserService.Role == "Client" && _currentUserService.ClientId != client.Id)
@@ -37,8 +38,13 @@ public class GetEquipementsByClientQueryHandler : IRequestHandler<GetEquipements
             throw new ForbiddenAccessException("Vous ne pouvez consulter que vos propre equipements.");
         }
 
-        return equipements.Select(equipement => new EquipementDto(equipement))
-                          .ToList();
+        return new PagedResult<EquipementDto>
+        {
+            Items = equipements.Select(equipement => new EquipementDto(equipement)).ToList(),
+            TotalCount = totalCount,
+            Page = request.Page,
+            PageSize = request.PageSize
+        };
 
     }
 }

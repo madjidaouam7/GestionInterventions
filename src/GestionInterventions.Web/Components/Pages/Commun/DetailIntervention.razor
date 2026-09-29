@@ -7,6 +7,7 @@
 @inject IHttpClientFactory HttpClientFactory
 @inject TokenProvider TokenProvider
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <PageTitle>Détail intervention</PageTitle>
 
@@ -20,40 +21,71 @@ else if (_errorMessage is not null)
 {
     <div class="alert alert-danger">@_errorMessage</div>
 }
-else if (_intervention is not null)
+@if (_intervention is not null)
 {
-    <div class="card">
-        <div class="card-body">
-            <p>
-                <strong>Statut :</strong> <span class="badge bg-secondary">@_intervention.Statut</span><br />
-                <strong>Date prévue :</strong> @_intervention.DatePrevue.ToString("dd/MM/yyyy HH:mm")<br />
-                <strong>Demande :</strong> #@_intervention.DemandeId<br />
-                <strong>Technicien :</strong> @_intervention.TechnicienNom
-            </p>
-
-            @if (_intervention.CompteRendu is not null)
-            {
-                <hr />
-                <h5>Compte-rendu</h5>
-                <p>
-                    <strong>Opérations effectuées :</strong> @_intervention.CompteRendu.OperationsEffectuees<br />
-                    <strong>Observations :</strong> @_intervention.CompteRendu.Observations<br />
-                    <strong>Résultat :</strong>
-                    <span class="badge @(_intervention.CompteRendu.Resultat == "Succes" ? "bg-success" : "bg-danger")">
-                        @_intervention.CompteRendu.Resultat
-                    </span>
-                    @if (!string.IsNullOrWhiteSpace(_intervention.CompteRendu.Recommandations))
-                    {
-                        <br />
-                        <strong>Recommandations :</strong>
-                        @_intervention.CompteRendu.Recommandations
-                    }
-                </p>
-            }
+    <Modal Titre="Détails de l'intervention" Visible="true" OnClose="FermerDetails">
+        <div class="intervention-details-main">
+            <dl class="intervention-details-column">
+                <div class="detail-item">
+                    <dt>Équipement</dt>
+                    <dd>@_intervention.EquipementNom</dd>
+                </div>
+                <div class="detail-item">
+                    <dt>Problème / description</dt>
+                    <dd>@_intervention.DescriptionDemande</dd>
+                </div>
+                <div class="detail-item">
+                    <dt>Date prévue</dt>
+                    <dd>@_intervention.DatePrevue.ToString("dd/MM/yyyy HH:mm")</dd>
+                </div>
+            </dl>
+            <dl class="intervention-details-column">
+                <div class="detail-item">
+                    <dt>Intervention ID</dt>
+                    <dd>#@_intervention.Id</dd>
+                </div>
+                <div class="detail-item">
+                    <dt>Demande ID</dt>
+                    <dd>#@_intervention.DemandeId</dd>
+                </div>
+                <div class="detail-item">
+                    <dt>Statut</dt>
+                    <dd><span
+                        class="badge @GetStatutBadgeClass(_intervention.Statut)">@GetStatutLabel(_intervention.Statut)</span>
+                    </dd>
+                </div>
+            </dl>
         </div>
-    </div>
 
-    <button class="btn btn-outline-secondary mt-3" @onclick="Retour">Retour</button>
+        <div class="intervention-details-divider" role="separator"></div>
+
+        <h3 class="intervention-report-title">Compte rendu</h3>
+        @if (_intervention.CompteRendu is null)
+        {
+            <p class="text-muted intervention-report-empty">Aucun compte rendu disponible.</p>
+        }
+        else
+        {
+            <dl class="intervention-details intervention-report">
+                <div>
+                    <dt>Opérations effectuées</dt>
+                    <dd>@DisplayOrFallback(_intervention.CompteRendu.OperationsEffectuees)</dd>
+                </div>
+                <div>
+                    <dt>Observations</dt>
+                    <dd>@DisplayOrFallback(_intervention.CompteRendu.Observations)</dd>
+                </div>
+                <div>
+                    <dt>Résultat</dt>
+                    <dd>@_intervention.CompteRendu.Resultat</dd>
+                </div>
+                <div>
+                    <dt>Recommandations</dt>
+                    <dd>@DisplayOrFallback(_intervention.CompteRendu.Recommandations)</dd>
+                </div>
+            </dl>
+        }
+    </Modal>
 }
 
 @code {
@@ -75,8 +107,7 @@ else if (_intervention is not null)
 
             if (!response.IsSuccessStatusCode)
             {
-                var details = await response.Content.ReadAsStringAsync();
-                _errorMessage = $"Erreur : {(int)response.StatusCode} {response.StatusCode}. {details}";
+                _errorMessage = await ApiErrorMessageReader.ReadAsync(response, "Impossible de charger l'intervention.");
                 return;
             }
 
@@ -92,10 +123,29 @@ else if (_intervention is not null)
         }
     }
 
-    private void Retour()
+    private async Task FermerDetails()
     {
-        Navigation.NavigateTo("/");
+        await JS.InvokeVoidAsync("history.back");
     }
+    
+    private static string DisplayOrFallback(string? value) => string.IsNullOrWhiteSpace(value) ? "Non renseigné" : value;
+    private static string GetStatutLabel(string statut) => statut switch
+    {
+        "Planifiee" => "Planifiée",
+        "EnCours" => "En cours",
+        "Terminee" => "Terminée",
+        "Cloturee" => "Clôturée",
+        _ => statut
+    };
+
+    private static string GetStatutBadgeClass(string statut) => statut switch
+    {
+        "Planifiee" => "bg-secondary",
+        "EnCours" => "bg-warning text-dark",
+        "Terminee" => "bg-info text-dark",
+        "Cloturee" => "bg-success",
+        _ => "bg-secondary"
+    };
 
     private class InterventionDto
     {
@@ -104,6 +154,8 @@ else if (_intervention is not null)
         public int DemandeId { get; set; }
         public int TechnicienId { get; set; }
         public string TechnicienNom { get; set; } = string.Empty;
+        public string EquipementNom { get; set; } = string.Empty;
+        public string DescriptionDemande { get; set; } = string.Empty;
         public string Statut { get; set; } = string.Empty;
         public CompteRenduDto? CompteRendu { get; set; }
     }

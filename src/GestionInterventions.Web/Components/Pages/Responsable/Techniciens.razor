@@ -15,51 +15,50 @@
     @(_afficherFormulaire ? "Annuler" : "Ajouter un technicien")
 </button>
 
-@if (_afficherFormulaire)
-{
-    <div class="card mb-3">
-        <div class="card-body">
-            <EditForm Model="_formModel" OnValidSubmit="HandleCreer">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
+<Modal Titre="Ajouter un technicien" Visible="@_afficherFormulaire" OnClose="FermerFormulaire">
+    <EditForm Model="_formModel" OnValidSubmit="HandleCreer">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
 
-                <div class="mb-2">
-                    <label>Nom</label>
-                    <InputText class="form-control" @bind-Value="_formModel.Nom" />
-                </div>
-
-                <div class="mb-2">
-                    <label>Email</label>
-                    <InputText class="form-control" @bind-Value="_formModel.Email" />
-                </div>
-
-                <div class="mb-2">
-                    <label>Mot de passe</label>
-                    <InputText type="password" class="form-control" @bind-Value="_formModel.Password" />
-                </div>
-
-                <div class="mb-2">
-                    <label>Téléphone</label>
-                    <InputText class="form-control" @bind-Value="_formModel.Telephone" />
-                </div>
-
-                <div class="mb-2">
-                    <label>Adresse</label>
-                    <InputText class="form-control" @bind-Value="_formModel.Adresse" />
-                </div>
-
-                @if (!string.IsNullOrEmpty(_createError))
-                {
-                    <div class="alert alert-danger">@_createError</div>
-                }
-
-                <button type="submit" class="btn btn-success" disabled="@_isCreating">
-                    @(_isCreating ? "Création..." : "Créer le technicien")
-                </button>
-            </EditForm>
+        <div class="mb-2">
+            <label>Nom</label>
+            <InputText class="form-control" @bind-Value="_formModel.Nom" />
         </div>
-    </div>
-}
+
+        <div class="mb-2">
+            <label>Email</label>
+            <InputText class="form-control" @bind-Value="_formModel.Email" />
+        </div>
+
+        <div class="mb-2">
+            <label>Mot de passe</label>
+            <InputText type="password" class="form-control" @bind-Value="_formModel.Password" />
+        </div>
+
+        <div class="mb-2">
+            <label>Téléphone</label>
+            <InputText class="form-control" @bind-Value="_formModel.Telephone" />
+        </div>
+
+        <div class="mb-2">
+            <label>Adresse</label>
+            <InputText class="form-control" @bind-Value="_formModel.Adresse" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(_createError))
+        {
+            <div class="alert alert-danger">@_createError</div>
+        }
+                
+
+        <button type="submit" class="btn btn-success" disabled="@_isCreating">
+            @(_isCreating ? "Création..." : "Créer le technicien")
+        </button>
+        <button type="button" class="btn btn-outline-secondary ms-2" @onclick="FermerFormulaire">
+            Annuler
+        </button>
+    </EditForm>
+</Modal>
 
 @if (_isLoading)
 {
@@ -151,6 +150,12 @@ else
         }
     }
 
+    private void FermerFormulaire()
+    {
+        _afficherFormulaire = false;
+        _createError = null;
+    }
+
     private async Task HandleCreer()
     {
         _isCreating = true;
@@ -172,8 +177,7 @@ else
 
             if (!response.IsSuccessStatusCode)
             {
-                var details = await response.Content.ReadAsStringAsync();
-                _createError = $"Erreur : {details}";
+                _createError = await ApiErrorMessageReader.ReadAsync(response, "Une erreur est survenue lors de l'ajout.");
                 return;
             }
 
@@ -206,5 +210,10 @@ else
         public string Email { get; set; } = string.Empty;
         public string Telephone { get; set; } = string.Empty;
         public string Adresse { get; set; } = string.Empty;
+    }
+
+    private class ErrorResponse
+    {
+        public string Error { get; set; } = string.Empty;
     }
 }

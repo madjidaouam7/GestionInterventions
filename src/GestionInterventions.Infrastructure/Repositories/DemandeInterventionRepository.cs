@@ -31,17 +31,38 @@ public class DemandeInterventionRepository : IDemandeInterventionRepository
                                             .ToListAsync(cancellationToken);
     }
 
-    public async Task<List<DemandeIntervention>> GetByClientIdAsync(int clientId, CancellationToken cancellationToken)
+    public async Task<(List<DemandeIntervention> Items, int TotalCount)> GetByClientIdAsync(int clientId, int page, int pageSize, CancellationToken cancellationToken)
     {
-        return await _context.DemandeInterventions.Where(d => d.Equipement.ClientId == clientId)
-                                         .Include(d => d.Equipement)
-                                         .ToListAsync(cancellationToken);
+        var query = _context.DemandeInterventions
+            .Where(d => d.Equipement.ClientId == clientId)
+            .Include(d => d.Equipement)
+            .AsQueryable();
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(d => d.DateDemande)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
     }
 
-    public async Task<List<DemandeIntervention>> GetAllAsync(CancellationToken cancellationToken)
+    public async Task<(List<DemandeIntervention> Items, int TotalCount)> GetAllAsync(int page, int pageSize, CancellationToken cancellationToken)
     {
-        return await _context.DemandeInterventions
+        var query = _context.DemandeInterventions
             .Include(d => d.Equipement)
+            .AsQueryable();
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(d => d.DateDemande)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
     }
 }

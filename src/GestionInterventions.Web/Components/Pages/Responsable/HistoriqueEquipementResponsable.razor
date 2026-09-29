@@ -97,8 +97,7 @@ else if (_historique is not null)
 
             if (!response.IsSuccessStatusCode)
             {
-                var details = await response.Content.ReadAsStringAsync();
-                _errorMessage = $"Erreur : {details}";
+                _errorMessage = await ApiErrorMessageReader.ReadAsync(response, "Impossible de charger l'historique.");
                 return;
             }
 

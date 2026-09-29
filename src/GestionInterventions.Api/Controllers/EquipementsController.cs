@@ -1,4 +1,5 @@
 using GestionInterventions.Application.DTOs;
+using GestionInterventions.Application.Common.Models;
 using GestionInterventions.Application.Features.Equipements.Commands.CreateEquipement;
 using GestionInterventions.Application.Features.Equipements.Queries.GetAllEquipements;
 using GestionInterventions.Application.Features.Equipements.Queries.GetEquipementById;
@@ -50,9 +51,13 @@ public class EquipementsController : ControllerBase
 
     [HttpGet("{clientId}/equipements")]
     [Authorize(Roles = "Responsable,Client")]
-    public async Task<ActionResult<List<EquipementDto>>> GetEquipementsByClient(int clientId, CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<EquipementDto>>> GetEquipementsByClient(
+        int clientId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken cancellationToken = default)
     {
-        var query = new GetEquipementsByClientQuery(clientId);
+        var query = new GetEquipementsByClientQuery(clientId, page, pageSize);
 
 
         var equipements = await _mediator.Send(query, cancellationToken);

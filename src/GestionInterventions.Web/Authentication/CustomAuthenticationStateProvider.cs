@@ -14,21 +14,43 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
         _tokenProvider = tokenProvider;
     }
 
-    public override Task<AuthenticationState> GetAuthenticationStateAsync()
+    public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
+        await _tokenProvider.LoadTokenAsync();
         var token = _tokenProvider.Token;
 
         if (string.IsNullOrWhiteSpace(token))
-            return Task.FromResult(new AuthenticationState(_anonymous));
+            return new AuthenticationState(_anonymous);
 
-        var claims = ParseClaimsFromJwt(token);
-        var identity = new ClaimsIdentity(claims, "jwt");
-        return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));
+        try
+        {
+            var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+            if (jwt.ValidTo <= DateTime.UtcNow)
+            {
+                await _tokenProvider.SetTokenAsync(null);
+                return new AuthenticationState(_anonymous);
+            }
+
+            var identity = new ClaimsIdentity(jwt.Claims, "jwt");
+            return new AuthenticationState(new ClaimsPrincipal(identity));
+        }
+        catch (ArgumentException)
+        {
+            await _tokenProvider.SetTokenAsync(null);
+            return new AuthenticationState(_anonymous);
+        }
     }
 
-    public void MarkUserAsAuthenticated(string token)
+    public async Task InitializeAsync()
     {
-        _tokenProvider.SetToken(token);
+        await _tokenProvider.LoadTokenAsync();
+        NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+    }
+
+    public async Task MarkUserAsAuthenticatedAsync(string token)
+    {
+        await _tokenProvider.SetTokenAsync(token);
 
         var claims = ParseClaimsFromJwt(token);
         var identity = new ClaimsIdentity(claims, "jwt");
@@ -37,9 +59,9 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
         NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(user)));
     }
 
-    public void MarkUserAsLoggedOut()
+    public async Task MarkUserAsLoggedOutAsync()
     {
-        _tokenProvider.SetToken(null);
+        await _tokenProvider.SetTokenAsync(null);
         NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_anonymous)));
     }
 

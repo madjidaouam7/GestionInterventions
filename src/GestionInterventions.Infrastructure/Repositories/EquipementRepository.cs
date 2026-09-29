@@ -24,10 +24,21 @@ public class EquipementRepository : IEquipementRepository
         return await _context.Equipements.FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
     }
 
-    public async Task<List<Equipement>> GetByClientIdAsync(int clientId, CancellationToken cancellationToken)
+    public async Task<(List<Equipement> Items, int TotalCount)> GetByClientIdAsync(int clientId, int page, int pageSize, CancellationToken cancellationToken)
     {
-        return await _context.Equipements.Where(e => e.ClientId == clientId)
-                                         .ToListAsync(cancellationToken);
+        var query = _context.Equipements
+            .Where(e => e.ClientId == clientId)
+            .AsQueryable();
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderBy(e => e.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
     }
 
     public async Task<Equipement?> GetHistoriqueAsync(int equipementId, CancellationToken cancellationToken)

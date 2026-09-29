@@ -12,13 +12,15 @@ public class CreateInterventionCommandHandler : IRequestHandler<CreateInterventi
     private readonly IInterventionRepository _interventionRepository;
     private readonly ITechnicienRepository _technicienRepository;
     private readonly IDemandeInterventionRepository _demandeInterventionRepository;
+    private readonly INotificationRepository _notificationRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public CreateInterventionCommandHandler(IInterventionRepository interventionRepository, ITechnicienRepository technicienRepository, IDemandeInterventionRepository demandeInterventionRepository, IUnitOfWork unitOfWork)
+    public CreateInterventionCommandHandler(IInterventionRepository interventionRepository, ITechnicienRepository technicienRepository, IDemandeInterventionRepository demandeInterventionRepository, INotificationRepository notificationRepository, IUnitOfWork unitOfWork)
     {
         _interventionRepository = interventionRepository;
         _demandeInterventionRepository = demandeInterventionRepository;
         _technicienRepository = technicienRepository;
+        _notificationRepository = notificationRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -38,10 +40,15 @@ public class CreateInterventionCommandHandler : IRequestHandler<CreateInterventi
             throw new DomainException("La demande doit être acceptée avant de planifier une intervention.");
 
 
-            var intervention = new Intervention(request.DemandeId, request.TechnicienId,request.DatePrevue);
+        var intervention = new Intervention(request.DemandeId, request.TechnicienId, request.DatePrevue);
 
-            await _interventionRepository.AddAsync(intervention, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _interventionRepository.AddAsync(intervention, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var notification = new Notification(technicien.IdentityUserId, "NouvelleIntervention", "Une nouvelle intervention vous a été planifiée.", request.DemandeId, intervention.Id);
+
+        await _notificationRepository.AddAsync(notification, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return intervention.Id;
     }

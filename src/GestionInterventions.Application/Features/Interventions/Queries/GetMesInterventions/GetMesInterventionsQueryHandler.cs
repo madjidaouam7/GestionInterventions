@@ -30,8 +30,6 @@ public class GetMesInterventionsQueryHandler : IRequestHandler<GetMesInterventio
 
         var interventions = await _interventionRepository.GetByTechnicienIdAsync(request.TechnicienId, cancellationToken);
 
-        return interventions.Select(intervention => new InterventionDto(intervention))
-                            .ToList();
-
+        return interventions.Select(intervention => new InterventionDto(intervention)).ToList();
     }
 }

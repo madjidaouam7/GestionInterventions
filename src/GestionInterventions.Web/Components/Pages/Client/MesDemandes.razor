@@ -4,6 +4,7 @@
 @using System.Net.Http.Headers
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
+@using GestionInterventions.Application.Common.Models
 @using GestionInterventions.Web.Authentication
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IHttpClientFactory HttpClientFactory
@@ -29,55 +30,54 @@ else if (_equipements is null || _equipements.Count == 0)
 {
     <p>Vous n'avez aucun équipement enregistré. Impossible de déclarer une demande.</p>
 }
-else if (_afficherFormulaire)
-{
-    <div class="card mb-3">
-        <div class="card-body">
-            <EditForm Model="_formModel" OnValidSubmit="HandleSubmit">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
+<Modal Titre="Déclarer une demande" Visible="@(_afficherFormulaire && _equipements is { Count: > 0 })"
+       OnClose="FermerFormulaire">
+    <EditForm Model="_formModel" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
 
-                <div class="mb-3">
-                    <label>Équipement concerné</label>
-                    <InputSelect class="form-select" @bind-Value="_formModel.EquipementId">
-                        <option value="0">-- Sélectionnez un équipement --</option>
-                        @foreach (var equipement in _equipements)
-                        {
-                            <option value="@equipement.Id">@equipement.Nom (@equipement.NumeroSerie)</option>
-                        }
-                    </InputSelect>
-                </div>
-
-                <div class="mb-3">
-                    <label>Description du problème</label>
-                    <InputTextArea class="form-control" rows="4" @bind-Value="_formModel.Description" />
-                </div>
-
-                <div class="mb-3">
-                    <label>Priorité</label>
-                    <InputSelect class="form-select" @bind-Value="_formModel.Priorite">
-                        <option value="Normale">Normale</option>
-                        <option value="Urgente">Urgente</option>
-                    </InputSelect>
-                </div>
-
-                @if (!string.IsNullOrEmpty(_submitError))
+        <div class="mb-3">
+            <label>Équipement concerné</label>
+            <InputSelect class="form-select" @bind-Value="_formModel.EquipementId">
+                <option value="0">-- Sélectionnez un équipement --</option>
+                @foreach (var equipement in _equipements ?? [])
                 {
-                    <div class="alert alert-danger">@_submitError</div>
+                    <option value="@equipement.Id">@equipement.Nom (@equipement.NumeroSerie)</option>
                 }
-
-                @if (_submitSuccess)
-                {
-                    <div class="alert alert-success">Demande déclarée avec succès.</div>
-                }
-
-                <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
-                    @(_isSubmitting ? "Envoi..." : "Déclarer la demande")
-                </button>
-            </EditForm>
+            </InputSelect>
         </div>
-    </div>
-}
+
+        <div class="mb-3">
+            <label>Description du problème</label>
+            <InputTextArea class="form-control" rows="4" @bind-Value="_formModel.Description" />
+        </div>
+
+        <div class="mb-3">
+            <label>Priorité</label>
+            <InputSelect class="form-select" @bind-Value="_formModel.Priorite">
+                <option value="Normale">Normale</option>
+                <option value="Urgente">Urgente</option>
+            </InputSelect>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_submitError))
+        {
+            <div class="alert alert-danger">@_submitError</div>
+        }
+
+        @if (_submitSuccess)
+        {
+            <div class="alert alert-success">Demande déclarée avec succès.</div>
+        }
+
+        <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
+            @(_isSubmitting ? "Envoi..." : "Déclarer la demande")
+        </button>
+        <button type="button" class="btn btn-outline-secondary ms-2" @onclick="FermerFormulaire">
+            Annuler
+        </button>
+    </EditForm>
+</Modal>
 
 @if (_isLoading)
 {
@@ -124,6 +124,48 @@ else
             }
         </tbody>
     </table>
+
+    @if (_totalPages > 1)
+    {
+        <div class="d-flex justify-content-center align-items-center gap-2 mt-4 mb-4">
+            <button class="btn btn-outline-primary" @onclick="PagePrecedente" disabled="@(_page == 1)">
+                ← Précédente
+            </button>
+
+            <button class="btn @(_page == 1 ? "btn-primary" : "btn-outline-primary")" @onclick="() => AllerAPage(1)">
+                1
+            </button>
+
+            @if (_page > 3)
+            {
+                <span class="px-1">...</span>
+            }
+
+            @for (int i = Math.Max(2, _page - 1); i <= Math.Min(_totalPages - 1, _page + 1); i++)
+            {
+                var pageNumber = i;
+
+                <button class="btn @(_page == pageNumber ? "btn-primary" : "btn-outline-primary")"
+                        @onclick="() => AllerAPage(pageNumber)">
+                    @pageNumber
+                </button>
+            }
+
+            @if (_page < _totalPages - 2)
+            {
+                <span class="px-1">...</span>
+            }
+
+            <button class="btn @(_page == _totalPages ? "btn-primary" : "btn-outline-primary")"
+                    @onclick="() => AllerAPage(_totalPages)">
+                @_totalPages
+            </button>
+
+            <button class="btn btn-outline-primary" @onclick="PageSuivante" disabled="@(_page == _totalPages)">
+                Suivante →
+            </button>
+        </div>
+    }
 }
 
 @code {
@@ -138,6 +180,9 @@ else
     private string? _submitError;
     private bool _submitSuccess;
     private bool _isSubmitting;
+    private int _page = 1;
+    private const int _pageSize = 10;
+    private int _totalPages;
 
 
     protected override async Task OnInitializedAsync()
@@ -152,6 +197,12 @@ else
         _errorMessage = null;
         if (_afficherFormulaire)
             _formModel = new FormModel();
+    }
+
+    private void FermerFormulaire()
+    {
+        _afficherFormulaire = false;
+        _submitError = null;
     }
 
 
@@ -174,7 +225,7 @@ else
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
 
-            var response = await client.GetAsync($"api/Equipements/{clientIdClaim}/equipements");
+            var response = await client.GetAsync($"api/Equipements/{clientIdClaim}/equipements?page=1&pageSize=100");
 
             if (!response.IsSuccessStatusCode)
             {
@@ -182,7 +233,8 @@ else
                 return;
             }
 
-            _equipements = await response.Content.ReadFromJsonAsync<List<EquipementDto>>();
+            var result = await response.Content.ReadFromJsonAsync<PagedResult<EquipementDto>>();
+            _equipements = result?.Items;
         }
         catch (Exception)
         {
@@ -203,16 +255,21 @@ else
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
 
-            var response = await client.GetAsync("api/DemandeInterventions/mes-demandes");
+            var response = await client.GetAsync($"api/DemandeInterventions/mes-demandes?page={_page}&pageSize={_pageSize}");
 
             if (!response.IsSuccessStatusCode)
             {
-                var details = await response.Content.ReadAsStringAsync();
-                _errorMessage = $"Erreur API : {(int)response.StatusCode} {response.StatusCode}. {details}";
+                _errorMessage = await ApiErrorMessageReader.ReadAsync(response, "Impossible de charger vos demandes.");
                 return;
             }
 
-            _demandes = await response.Content.ReadFromJsonAsync<List<DemandeDto>>();
+            var result = await response.Content.ReadFromJsonAsync<PagedResult<DemandeDto>>();
+
+            if (result is not null)
+            {
+                _demandes = result.Items;
+                _totalPages = result.TotalPages;
+            }
         }
         catch (Exception)
         {
@@ -222,6 +279,33 @@ else
         {
             _isLoading = false;
         }
+    }
+
+    private async Task PagePrecedente()
+    {
+        if (_page > 1)
+        {
+            _page--;
+            await ChargerDemandes();
+        }
+    }
+
+    private async Task PageSuivante()
+    {
+        if (_page < _totalPages)
+        {
+            _page++;
+            await ChargerDemandes();
+        }
+    }
+
+    private async Task AllerAPage(int page)
+    {
+        if (page < 1 || page > _totalPages || page == _page)
+            return;
+
+        _page = page;
+        await ChargerDemandes();
     }
 
 
@@ -253,8 +337,7 @@ else
 
             if (!response.IsSuccessStatusCode)
             {
-                var details = await response.Content.ReadAsStringAsync();
-                _submitError = $"Erreur lors de l'envoi : {details}";
+                _submitError = await ApiErrorMessageReader.ReadAsync(response, "Une erreur est survenue lors de l'ajout.");
                 return;
             }
 
@@ -308,5 +391,19 @@ else
         public int EquipementId { get; set; }
         public string Description { get; set; } = string.Empty;
         public string Priorite { get; set; } = "Normale";
+    }
+
+    private class ErrorResponse
+    {
+        public string Error { get; set; } = string.Empty;
+    }
+
+    private class PagedResult<T>
+    {
+        public List<T> Items { get; set; } = [];
+        public int TotalCount { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages { get; set; }
     }
 }

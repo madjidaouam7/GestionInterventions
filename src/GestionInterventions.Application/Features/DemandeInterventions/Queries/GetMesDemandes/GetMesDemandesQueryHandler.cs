@@ -1,5 +1,6 @@
 using GestionInterventions.Application.Common.Exceptions;
 using GestionInterventions.Application.Common.Interfaces;
+using GestionInterventions.Application.Common.Models;
 using GestionInterventions.Application.DTOs;
 using GestionInterventions.Domain.Entities;
 using GestionInterventions.Domain.Exceptions;
@@ -7,7 +8,7 @@ using MediatR;
 
 namespace GestionInterventions.Application.Features.DemandeInterventions.Queries.GetMesDemandes;
 
-public class GetMesDemandesQueryHandler : IRequestHandler<GetMesDemandesQuery, List<DemandeInterventionDto>>
+public class GetMesDemandesQueryHandler : IRequestHandler<GetMesDemandesQuery, PagedResult<DemandeInterventionDto>>
 {
     private readonly IDemandeInterventionRepository _demandeInterventionRepository;
     private readonly IClientRepository _clientRepository;
@@ -21,17 +22,22 @@ public class GetMesDemandesQueryHandler : IRequestHandler<GetMesDemandesQuery, L
         _currentUserService = currentUserService;
     }
 
-    public async Task<List<DemandeInterventionDto>> Handle(GetMesDemandesQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<DemandeInterventionDto>> Handle(GetMesDemandesQuery request, CancellationToken cancellationToken)
     {
         var client = await _clientRepository.GetByIdAsync(request.ClientId, cancellationToken);
 
         if (client is null)
             throw new NotFoundException("Le client spécifié n'existe pas.");
 
-        var demandeInterventions = await _demandeInterventionRepository.GetByClientIdAsync(request.ClientId, cancellationToken);
+        var (demandeInterventions, totalCount) = await _demandeInterventionRepository.GetByClientIdAsync(request.ClientId, request.Page, request.PageSize, cancellationToken);
 
-        return demandeInterventions.Select(demandeIntervention => new DemandeInterventionDto(demandeIntervention))
-                                   .ToList();
+        return new PagedResult<DemandeInterventionDto>
+        {
+            Items = demandeInterventions.Select(demandeIntervention => new DemandeInterventionDto(demandeIntervention)).ToList(),
+            TotalCount = totalCount,
+            Page = request.Page,
+            PageSize = request.PageSize
+        };
 
     }
 }

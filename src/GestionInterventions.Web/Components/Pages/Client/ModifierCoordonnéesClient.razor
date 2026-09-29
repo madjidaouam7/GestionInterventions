@@ -135,8 +135,7 @@ else
 
             if (!response.IsSuccessStatusCode)
             {
-                var details = await response.Content.ReadAsStringAsync();
-                _errorMessage = $"Erreur lors de la mise à jour : {details}";
+                _errorMessage = await ApiErrorMessageReader.ReadAsync(response, "Erreur lors de la mise à jour.");
                 return;
             }
 

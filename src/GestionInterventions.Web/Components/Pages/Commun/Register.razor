@@ -1,6 +1,9 @@
 @page "/register"
+@layout AuthLayout
+
 @attribute [AllowAnonymous]
 @using System.Net.Http.Json
+@using GestionInterventions.Web.Components.Layout
 @using Microsoft.AspNetCore.Authorization
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Navigation
@@ -83,8 +86,7 @@
 
             if (!response.IsSuccessStatusCode)
             {
-                var details = await response.Content.ReadAsStringAsync();
-                _errorMessage = $"Erreur lors de l'inscription : {details}";
+                _errorMessage = await ApiErrorMessageReader.ReadAsync(response, "Erreur lors de l'inscription.");
                 return;
             }
 

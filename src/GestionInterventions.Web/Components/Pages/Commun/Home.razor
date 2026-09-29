@@ -14,7 +14,7 @@
 <AuthorizeView Context="authContext">
     <Authorized>
         <h1>Bonjour, @(authContext.User.FindFirst("Nom")?.Value ??
-                                    authContext.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value)</h1>
+                                                                                                            authContext.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value)</h1>
 
             @if (_isLoading)
             {
@@ -43,9 +43,9 @@
         </Authorized>
         <NotAuthorized>
             <h1>Bienvenue sur GestionInterventions</h1>
-            <p>Gérez vos équipements et interventions techniques en toute simplicité.</p>
+            <p>GÃ©rez vos Ã©quipements et interventions techniques en toute simplicitÃ©.</p>
             <a href="/login" class="btn btn-primary">Se connecter</a>
-            <a href="/register" class="btn btn-outline-primary ms-2">Créer un compte</a>
+            <a href="/register" class="btn btn-outline-primary ms-2">CrÃ©er un compte</a>
         </NotAuthorized>
     </AuthorizeView>
 
@@ -62,6 +62,7 @@
         if (role is null)
         {
             _isLoading = false;
+            Navigation.NavigateTo("/login", replace: true);
             return;
         }
 
@@ -99,20 +100,20 @@ Microsoft.AspNetCore.Components.Authorization.AuthenticationState authState)
         var clientIdClaim = authState.User.FindFirst("ClientId")?.Value;
         if (clientIdClaim is null) return;
 
-        var equipementsResponse = await httpClient.GetAsync($"api/Equipements/{clientIdClaim}/equipements");
+        var equipementsResponse = await httpClient.GetAsync($"api/Equipements/{clientIdClaim}/equipements?page=1&pageSize=100");
         var equipements = equipementsResponse.IsSuccessStatusCode
-            ? await equipementsResponse.Content.ReadFromJsonAsync<List<EquipementDto>>()
+            ? (await equipementsResponse.Content.ReadFromJsonAsync<PagedResult<EquipementDto>>())?.Items
             : new List<EquipementDto>();
 
-        var demandesResponse = await httpClient.GetAsync("api/DemandeInterventions/mes-demandes");
+        var demandesResponse = await httpClient.GetAsync("api/DemandeInterventions/mes-demandes?page=1&pageSize=100");
         var demandes = demandesResponse.IsSuccessStatusCode
-            ? await demandesResponse.Content.ReadFromJsonAsync<List<DemandeDto>>()
+            ? (await demandesResponse.Content.ReadFromJsonAsync<PagedResult<DemandeDto>>())?.Items
             : new List<DemandeDto>();
 
         _stats = new List<StatItem>
         {
-            new("Équipements", equipements?.Count ?? 0, "/mes-equipements"),
-            new("Équipements en panne", equipements?.Count(e => e.Statut == "EnPanne") ?? 0, "/mes-equipements"),
+            new("Ã©quipements", equipements?.Count ?? 0, "/mes-equipements"),
+            new("Ã©quipements en panne", equipements?.Count(e => e.Statut == "EnPanne") ?? 0, "/mes-equipements"),
             new("Demandes en attente", demandes?.Count(d => d.Statut == "EnAttente") ?? 0, "/mes-demandes")
         };
     }
@@ -126,19 +127,22 @@ Microsoft.AspNetCore.Components.Authorization.AuthenticationState authState)
 
         _stats = new List<StatItem>
         {
-            new("Interventions planifiées", interventions?.Count(i => i.Statut == "Planifiee") ?? 0, "/mes-interventions"),
-            new("Interventions en cours", interventions?.Count(i => i.Statut == "EnCours") ?? 0, "/mes-interventions"),
-            new("Interventions terminées", interventions?.Count(i => i.Statut == "Terminee" || i.Statut == "Cloturee") ?? 0,
-"/mes-interventions")
+            new("Interventions planifiÃ©es", interventions?.Count(i => i.Statut == "Planifiee") ?? 0,
+"/mes-interventions?filter=afaire"),
+            new("Interventions en cours", interventions?.Count(i => i.Statut == "EnCours") ?? 0,
+"/mes-interventions?filter=encours"),
+            new("Interventions terminÃ©es", interventions?.Count(i => i.Statut == "Terminee" || i.Statut == "Cloturee") ?? 0,
+"/mes-interventions?filter=termine")
         };
     }
 
     private async Task ChargerStatsResponsable(HttpClient httpClient)
     {
-        var demandesResponse = await httpClient.GetAsync("api/DemandeInterventions");
-        var demandes = demandesResponse.IsSuccessStatusCode
-            ? await demandesResponse.Content.ReadFromJsonAsync<List<DemandeDto>>()
-            : new List<DemandeDto>();
+        var demandesResponse = await httpClient.GetAsync("api/DemandeInterventions?page=1&pageSize=100");
+        var demandesResult = demandesResponse.IsSuccessStatusCode
+            ? await demandesResponse.Content.ReadFromJsonAsync<PagedResult<DemandeDto>>()
+            : null;
+        var demandes = demandesResult?.Items ?? new List<DemandeDto>();
 
         var interventionsResponse = await httpClient.GetAsync("api/Interventions");
         var interventions = interventionsResponse.IsSuccessStatusCode
@@ -158,7 +162,7 @@ Microsoft.AspNetCore.Components.Authorization.AuthenticationState authState)
         _stats = new List<StatItem>
         {
             new("Demandes en attente", demandes?.Count(d => d.Statut == "EnAttente") ?? 0, "/demandes"),
-            new("Interventions à valider", interventions?.Count(i => i.Statut == "Terminee") ?? 0, "/interventions-a-valider"),
+            new("Interventions Ã  valider", interventions?.Count(i => i.Statut == "Terminee") ?? 0, "/interventions-a-valider"),
             new("Clients", clients?.Count ?? 0, "/clients"),
             new("Techniciens", techniciens?.Count ?? 0, "/techniciens")
         };
@@ -182,5 +186,14 @@ Microsoft.AspNetCore.Components.Authorization.AuthenticationState authState)
     {
         public int Id { get; set; }
         public string Statut { get; set; } = string.Empty;
+    }
+
+    private class PagedResult<T>
+    {
+        public List<T> Items { get; set; } = [];
+        public int TotalCount { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages { get; set; }
     }
 }

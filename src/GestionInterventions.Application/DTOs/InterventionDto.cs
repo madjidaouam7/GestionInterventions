@@ -10,6 +10,8 @@ public class InterventionDto
     public int DemandeId { get; set; }
     public int TechnicienId { get; set; }
     public string TechnicienNom { get; set; } = string.Empty;
+    public string EquipementNom { get; set; } = string.Empty;
+    public string DescriptionDemande { get; set; } = string.Empty;
     public StatutIntervention Statut { get; set; }
     public CompteRenduDto? CompteRendu { get; set; }
     public InterventionDto() { }
@@ -20,6 +22,8 @@ public class InterventionDto
         DemandeId = intervention.DemandeId;
         TechnicienId = intervention.TechnicienId;
         TechnicienNom = intervention.Technicien?.Nom ?? string.Empty;
+        EquipementNom = intervention.Demande?.Equipement?.Nom ?? string.Empty;
+        DescriptionDemande = intervention.Demande?.Description ?? string.Empty;
         Statut = intervention.Statut;
 
         CompteRendu = intervention.CompteRendu is null

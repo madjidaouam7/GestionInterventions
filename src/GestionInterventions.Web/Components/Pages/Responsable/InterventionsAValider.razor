@@ -4,8 +4,11 @@
 @using System.Net.Http.Headers
 @using Microsoft.AspNetCore.Authorization
 @using GestionInterventions.Web.Authentication
+@using GestionInterventions.Web.Services
 @inject IHttpClientFactory HttpClientFactory
 @inject TokenProvider TokenProvider
+@inject ResponsableValidationNotificationStateService ResponsableValidationNotificationStateService
+@implements IDisposable
 
 <PageTitle>Interventions à valider</PageTitle>
 
@@ -31,7 +34,11 @@ else
     {
         @foreach (var intervention in aTraiter)
         {
-            <div class="card mb-3">
+            <div class="card mb-3 @(EstNouvelleIntervention(intervention.Id) ? "nouvelle-intervention-validation" : "")">
+                @if (EstNouvelleIntervention(intervention.Id))
+                {
+                    <span class="new-validation-indicator" aria-label="Nouvelle intervention terminée"></span>
+                }
                 <div class="card-body">
                     <h5 class="card-title">Intervention #@intervention.Id — @intervention.TechnicienNom</h5>
                     <p class="card-text">
@@ -83,6 +90,25 @@ else
     private string? _actionError;
     private int? _actionErrorInterventionId;
 
+    protected override void OnInitialized()
+    {
+        ResponsableValidationNotificationStateService.OnStateChanged +=
+            HandleNotificationStateChanged;
+    }
+
+    private void HandleNotificationStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ResponsableValidationNotificationStateService.OnStateChanged -=
+            HandleNotificationStateChanged;
+        ResponsableValidationNotificationStateService
+            .ClearInterventionTermineeNotifications();
+    }
+    
     protected override async Task OnInitializedAsync()
     {
         await ChargerInterventions();
@@ -116,6 +142,12 @@ else
         }
     }
 
+    private bool EstNouvelleIntervention(int interventionId)
+    {
+        return ResponsableValidationNotificationStateService
+            .EstNouvelleIntervention(interventionId);
+    }
+
     private async Task HandleValider(int interventionId) => await ExecuterAction(interventionId, "valider");
 
     private async Task HandleDemanderCorrection(int interventionId) => await ExecuterAction(interventionId,
@@ -135,11 +167,13 @@ else
 
             if (!response.IsSuccessStatusCode)
             {
-                var details = await response.Content.ReadAsStringAsync();
-                _actionError = $"Erreur : {details}";
+                _actionError = await ApiErrorMessageReader.ReadAsync(response, "Une erreur est survenue lors de la validation.");
                 _actionErrorInterventionId = interventionId;
                 return;
             }
+
+            ResponsableValidationNotificationStateService
+                .RemoveInterventionNotification(interventionId);
 
             await ChargerInterventions();
         }

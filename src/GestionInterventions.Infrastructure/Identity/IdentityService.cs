@@ -66,4 +66,11 @@ public class IdentityService : IIdentityService
             role
         );
     }
+
+    public async Task<string?> GetUserIdByEmailAsync(string email)
+    {
+        var user = await _userManager.FindByEmailAsync(email);
+
+        return user?.Id;
+    }
 }

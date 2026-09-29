@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using GestionInterventions.Domain.Exceptions;
 using GestionInterventions.Application.Common.Interfaces;
+using GestionInterventions.Application.Common.Models;
 
 namespace GestionInterventions.Api.Controllers;
 
@@ -57,11 +58,14 @@ public class DemandeInterventionsController : ControllerBase
 
     [HttpGet("mes-demandes")]
     [Authorize(Roles = "Client")]
-    public async Task<ActionResult<List<DemandeInterventionDto>>> GetMesDemandes(CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<DemandeInterventionDto>>> GetMesDemandes(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken cancellationToken = default)
     {
         var clientId = _currentUserService.ClientId ?? throw new ForbiddenAccessException("Identifiant client introuvable dans le token.");
 
-        var query = new GetMesDemandesQuery(clientId);
+        var query = new GetMesDemandesQuery(clientId, page, pageSize);
 
         var mesDemandes = await _mediator.Send(query, cancellationToken);
 
@@ -98,10 +102,15 @@ public class DemandeInterventionsController : ControllerBase
 
     [HttpGet]
     [Authorize(Roles = "Responsable")]
-    public async Task<ActionResult<List<DemandeInterventionDto>>> GetAllDemandes(CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<DemandeInterventionDto>>> GetAllDemandes(
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 10,
+    CancellationToken cancellationToken = default)
     {
-        var query = new GetAllDemandesQuery();
+        var query = new GetAllDemandesQuery(page, pageSize);
+
         var demandes = await _mediator.Send(query, cancellationToken);
+
         return Ok(demandes);
     }
 }

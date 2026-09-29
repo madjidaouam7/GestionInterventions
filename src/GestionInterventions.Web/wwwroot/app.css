@@ -174,9 +174,15 @@ body {
 
 .app-sidebar {
     width: var(--sidebar-width);
+    flex-shrink: 0;
+    align-self: flex-start;
     background-color: var(--color-surface);
     border-right: 1px solid var(--color-border);
-    min-height: calc(100vh - var(--topbar-height));
+    position: sticky;
+    top: var(--topbar-height);
+    height: calc(100vh - var(--topbar-height));
+    max-height: calc(100vh - var(--topbar-height));
+    overflow-y: auto;
 }
 
 .app-sidebar .nav-link {
@@ -251,4 +257,36 @@ body {
     font-size: 0.95rem;
     color: #6c757d;
     font-weight: 500;
+}
+
+.nouvelle-demande {
+    position: relative;
+}
+
+.new-demande-indicator {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 1Opx;
+    height: 10px;
+    min-width: 10px;
+    border-radius: 50%;
+    background-color: #dc3545;
+    box-shadow: 0 0 0 1px rgba(220, 53, 69, 0.25);
+}
+
+.nouvelle-intervention-validation {
+    position: relative;
+}
+
+.new-validation-indicator {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 10px;
+    height: 10px;
+    min-width: 10px;
+    border-radius: 50%;
+    background-color: #dc3545;
+    box-shadow: 0 0 0 1px rgba(220, 53, 69, 0.25);
 }

@@ -1,5 +1,6 @@
 using GestionInterventions.Web.Components;
 using GestionInterventions.Web.Authentication;
+using GestionInterventions.Web.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +12,10 @@ builder.Services.AddScoped<TokenProvider>();
 builder.Services.AddScoped<CustomAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
     sp.GetRequiredService<CustomAuthenticationStateProvider>());
+builder.Services.AddScoped<TechnicienNotificationStateService>();
+builder.Services.AddScoped<ResponsableNotificationStateService>();
+builder.Services.AddScoped<ResponsableValidationNotificationStateService>();
+
 
 builder.Services.AddAuthorizationCore();
 builder.Services.AddCascadingAuthenticationState();

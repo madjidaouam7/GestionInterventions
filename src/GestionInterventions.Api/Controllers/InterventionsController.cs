@@ -62,7 +62,8 @@ public class InterventionsController : ControllerBase
 
     [HttpGet("mes-interventions")]
     [Authorize(Roles = "Technicien")]
-    public async Task<ActionResult<List<InterventionDto>>> GetMesInterventions(CancellationToken cancellationToken)
+    public async Task<ActionResult<List<InterventionDto>>> GetMesInterventions(
+        CancellationToken cancellationToken = default)
     {
         var technicienId = _currentUserService.TechnicienId ?? throw new ForbiddenAccessException("Identifiant technicien introuvable dans le token.");
 

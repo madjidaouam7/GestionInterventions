@@ -5,7 +5,7 @@
 @inject NavigationManager Navigation
 
 <div class="app-topbar">
-    <a href="/" class="brand">GestionInterventions</a>
+    <a href="/" class="brand">Gestion Interventions</a>
 
     <AuthorizeView Context="topbarContext">
         <Authorized>
@@ -47,9 +47,9 @@
         _menuOuvert = !_menuOuvert;
     }
 
-    private void HandleLogout()
+    private async Task HandleLogout()
     {
-        AuthStateProvider.MarkUserAsLoggedOut();
+        await AuthStateProvider.MarkUserAsLoggedOutAsync();
         Navigation.NavigateTo("/", forceLoad: true);
     }
 }

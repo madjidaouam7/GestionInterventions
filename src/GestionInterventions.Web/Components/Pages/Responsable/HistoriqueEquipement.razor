@@ -181,8 +181,7 @@ else
 
             if (!response.IsSuccessStatusCode)
             {
-                var details = await response.Content.ReadAsStringAsync();
-                _historiqueError = $"Erreur : {details}";
+                _historiqueError = await ApiErrorMessageReader.ReadAsync(response, "Impossible de charger l'historique.");
                 return;
             }
 

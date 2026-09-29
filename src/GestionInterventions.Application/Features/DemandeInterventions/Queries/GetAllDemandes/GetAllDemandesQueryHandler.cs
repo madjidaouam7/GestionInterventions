@@ -1,10 +1,11 @@
 using GestionInterventions.Application.Common.Interfaces;
+using GestionInterventions.Application.Common.Models;
 using GestionInterventions.Application.DTOs;
 using MediatR;
 
 namespace GestionInterventions.Application.Features.DemandeInterventions.Queries.GetAllDemandes;
 
-public class GetAllDemandesQueryHandler : IRequestHandler<GetAllDemandesQuery, List<DemandeInterventionDto>>
+public class GetAllDemandesQueryHandler : IRequestHandler<GetAllDemandesQuery, PagedResult<DemandeInterventionDto>>
 {
     private readonly IDemandeInterventionRepository _demandeInterventionRepository;
     private readonly IInterventionRepository _interventionRepository;
@@ -15,9 +16,9 @@ public class GetAllDemandesQueryHandler : IRequestHandler<GetAllDemandesQuery, L
         _interventionRepository = interventionRepository;
     }
 
-    public async Task<List<DemandeInterventionDto>> Handle(GetAllDemandesQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<DemandeInterventionDto>> Handle(GetAllDemandesQuery request, CancellationToken cancellationToken)
     {
-        var demandes = await _demandeInterventionRepository.GetAllAsync(cancellationToken);
+        var (demandes, totalCount) = await _demandeInterventionRepository.GetAllAsync(request.Page, request.PageSize, cancellationToken);
 
         var result = new List<DemandeInterventionDto>();
 
@@ -34,6 +35,12 @@ public class GetAllDemandesQueryHandler : IRequestHandler<GetAllDemandesQuery, L
             result.Add(dto);
         }
 
-        return result;
+        return new PagedResult<DemandeInterventionDto>
+        {
+            Items = result,
+            TotalCount = totalCount,
+            Page = request.Page,
+            PageSize = request.PageSize
+        };
     }
 }

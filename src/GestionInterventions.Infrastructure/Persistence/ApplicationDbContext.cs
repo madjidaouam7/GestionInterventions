@@ -14,6 +14,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Equipement> Equipements => Set<Equipement>();
     public DbSet<DemandeIntervention> DemandeInterventions => Set<DemandeIntervention>();
     public DbSet<Intervention> Interventions => Set<Intervention>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

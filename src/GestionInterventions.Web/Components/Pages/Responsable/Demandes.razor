@@ -4,8 +4,11 @@
 @using System.Net.Http.Headers
 @using Microsoft.AspNetCore.Authorization
 @using GestionInterventions.Web.Authentication
+@using GestionInterventions.Web.Services
 @inject IHttpClientFactory HttpClientFactory
 @inject TokenProvider TokenProvider
+@inject ResponsableNotificationStateService ResponsableNotificationStateService
+@implements IDisposable
 
 <PageTitle>Demandes d'intervention</PageTitle>
 
@@ -25,9 +28,13 @@ else if (_demandes is null || _demandes.Count == 0)
 }
 else
 {
-    @foreach (var demande in _demandes.OrderByDescending(d => d.DateDemande))
+    @foreach (var demande in _demandes)
     {
-        <div class="card mb-3">
+        <div class="card mb-3 @(EstNouvelleDemande(demande.Id) ? "nouvelle-demande" : "")">
+            @if (EstNouvelleDemande(demande.Id))
+            {
+                <span class="new-demande-indicator" aria-label="Nouvelle demande"></span>
+            }
             <div class="card-body">
                 <h5 class="card-title">
                     Demande #@demande.Id — @demande.EquipementNom
@@ -40,11 +47,6 @@ else
                     </span>
                     <span class="text-muted ms-2">@demande.DateDemande.ToString("dd/MM/yyyy HH:mm")</span>
                 </p>
-
-                @if (_actionError is not null && _actionErrorDemandeId == demande.Id)
-                {
-                    <div class="alert alert-danger">@_actionError</div>
-                }
 
                 @if (demande.Statut == "EnAttente")
                 {
@@ -70,26 +72,36 @@ else
 
                             @if (_demandeEnModificationId == demande.Id)
                             {
-                                <EditForm Model="_modificationPlanificationModel" OnValidSubmit="() => HandleModifierPlanification(demande)">
+                                <Modal Titre="Modifier la planification" Visible="@(_demandeEnModificationId == demande.Id)"
+                                       OnClose="AnnulerModificationPlanification">
+                                    <EditForm Model="_modificationPlanificationModel"
+                                              OnValidSubmit="() => HandleModifierPlanification(demande)">
 
-                                    <DataAnnotationsValidator />
+                                        <DataAnnotationsValidator />
 
-                                    <div class="mb-2 mt-2">
-                                        <label>Date prévue</label>
+                                        <div class="mb-2">
+                                            <label>Date prévue</label>
 
-                                        <InputDate Type="InputDateType.DateTimeLocal" class="form-control"
-                                                   @bind-Value="_modificationPlanificationModel.DatePrevue" />
-                                    </div>
+                                            <InputDate Type="InputDateType.DateTimeLocal" class="form-control"
+                                                       @bind-Value="_modificationPlanificationModel.DatePrevue" />
+                                        </div>
 
-                                    <button type="submit" class="btn btn-primary" disabled="@_isProcessing">
-                                        @(_isProcessing ? "Modification..." : "Enregistrer")
-                                    </button>
+                                        <button type="submit" class="btn btn-primary" disabled="@_isProcessing">
+                                            @(_isProcessing ? "Modification..." : "Enregistrer")
+                                        </button>
 
-                                    <button type="button" class="btn btn-outline-secondary ms-2" @onclick="AnnulerModificationPlanification">
-                                        Annuler
-                                    </button>
+                                        <button type="button" class="btn btn-outline-secondary ms-2"
+                                                @onclick="AnnulerModificationPlanification">
+                                            Annuler
+                                        </button>
 
-                                </EditForm>
+                                        @if (_actionError is not null && _actionErrorDemandeId == demande.Id)
+                                        {
+                                            <div class="alert alert-danger">@_actionError</div>
+                                        }
+
+                                    </EditForm>
+                                </Modal>
                             }
                         }
                         else
@@ -99,36 +111,39 @@ else
                     }
                     else if (_demandeEnPlanificationId == demande.Id)
                     {
-                        <EditForm Model="_planificationModel" OnValidSubmit="() => HandlePlanifier(demande.Id)">
-                            <DataAnnotationsValidator />
+                        <Modal Titre="Planifier une intervention" Visible="@(_demandeEnPlanificationId == demande.Id)"
+                               OnClose="AnnulerPlanification">
+                            <EditForm Model="_planificationModel" OnValidSubmit="() => HandlePlanifier(demande.Id)">
+                                <DataAnnotationsValidator />
 
-                            <div class="mb-2">
-                                <label>Technicien</label>
-                                <InputSelect class="form-select" @bind-Value="_planificationModel.TechnicienId">
-                                    <option value="0">-- Sélectionnez un technicien --</option>
-                                    @if (_techniciens is not null)
-                                    {
-                                        @foreach (var technicien in _techniciens)
+                                <div class="mb-2">
+                                    <label>Technicien</label>
+                                    <InputSelect class="form-select" @bind-Value="_planificationModel.TechnicienId">
+                                        <option value="0">-- Sélectionnez un technicien --</option>
+                                        @if (_techniciens is not null)
                                         {
-                                            <option value="@technicien.Id">@technicien.Nom</option>
+                                            @foreach (var technicien in _techniciens)
+                                            {
+                                                <option value="@technicien.Id">@technicien.Nom</option>
+                                            }
                                         }
-                                    }
-                                </InputSelect>
-                            </div>
+                                    </InputSelect>
+                                </div>
 
-                            <div class="mb-2">
-                                <label>Date prévue</label>
-                                <InputDate Type="InputDateType.DateTimeLocal" class="form-control"
-                                           @bind-Value="_planificationModel.DatePrevue" />
-                            </div>
+                                <div class="mb-2">
+                                    <label>Date prévue</label>
+                                    <InputDate Type="InputDateType.DateTimeLocal" class="form-control"
+                                               @bind-Value="_planificationModel.DatePrevue" />
+                                </div>
 
-                            <button type="submit" class="btn btn-primary" disabled="@_isProcessing">
-                                @(_isProcessing ? "Envoi..." : "Confirmer la planification")
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary ms-2" @onclick="AnnulerPlanification">
-                                Annuler
-                            </button>
-                        </EditForm>
+                                <button type="submit" class="btn btn-primary" disabled="@_isProcessing">
+                                    @(_isProcessing ? "Envoi..." : "Confirmer la planification")
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary ms-2" @onclick="AnnulerPlanification">
+                                    Annuler
+                                </button>
+                            </EditForm>
+                        </Modal>
                     }
                     else
                     {
@@ -140,10 +155,66 @@ else
             </div>
         </div>
     }
+    @if (_totalPages > 1)
+    {
+        <div class="d-flex justify-content-center align-items-center gap-2 mt-4 mb-4">
+
+            <!-- Précédente -->
+            <button class="btn btn-outline-primary" @onclick="PagePrecedente" disabled="@(_page == 1)">
+                ← Précédente
+            </button>
+
+            <!-- Numéro 1 -->
+            <button class="btn @(_page == 1 ? "btn-primary" : "btn-outline-primary")" @onclick="() => AllerAPage(1)">
+                1
+            </button>
+
+            @if (_page > 3)
+            {
+                <span class="px-1">...</span>
+            }
+
+            <!-- Pages autour de la page actuelle -->
+            @for (int i = Math.Max(2, _page - 1);
+                 i <= Math.Min(_totalPages - 1, _page + 1);
+                 i++)
+            {
+                var pageNumber = i;
+
+                <button class="btn @(_page == pageNumber ? "btn-primary" : "btn-outline-primary")"
+                        @onclick="() => AllerAPage(pageNumber)">
+                    @pageNumber
+                </button>
+            }
+
+            @if (_page < _totalPages - 2)
+            {
+                <span class="px-1">...</span>
+            }
+
+            <!-- Dernière page -->
+            @if (_totalPages > 1)
+            {
+                <button class="btn @(_page == _totalPages ? "btn-primary" : "btn-outline-primary")"
+                        @onclick="() => AllerAPage(_totalPages)">
+                    @_totalPages
+                </button>
+            }
+
+            <!-- Suivante -->
+            <button class="btn btn-outline-primary" @onclick="PageSuivante" disabled="@(_page == _totalPages)">
+                Suivante →
+            </button>
+
+        </div>
+    }
 }
 
 @code {
     private List<DemandeDto>? _demandes;
+    private int _page = 1;
+    private const int _pageSize = 5;
+    private int _totalPages;
     private List<TechnicienDto>? _techniciens;
     private bool _isLoading = true;
     private string? _errorMessage;
@@ -159,6 +230,25 @@ else
     private int? _actionErrorDemandeId;
 
 
+    protected override void OnInitialized()
+    {
+        ResponsableNotificationStateService.OnStateChanged +=
+            HandleNotificationStateChanged;
+    }
+
+    private void HandleNotificationStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ResponsableNotificationStateService.OnStateChanged -=
+            HandleNotificationStateChanged;
+        ResponsableNotificationStateService
+            .ClearNouvelleDemandeNotifications();
+    }
+    
     protected override async Task OnInitializedAsync()
     {
         await ChargerDemandes();
@@ -168,20 +258,27 @@ else
     private async Task ChargerDemandes()
     {
         _isLoading = true;
+        _errorMessage = null;
         try
         {
             var client = HttpClientFactory.CreateClient("Api");
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
 
-            var response = await client.GetAsync("api/DemandeInterventions");
+            var response = await client.GetAsync($"api/DemandeInterventions?page={_page}&pageSize={_pageSize}");
 
             if (!response.IsSuccessStatusCode)
             {
-                _errorMessage = "Impossible de charger les demandes.";
+                _errorMessage = await ApiErrorMessageReader.ReadAsync(response, "Impossible de charger les demandes.");
                 return;
             }
 
-            _demandes = await response.Content.ReadFromJsonAsync<List<DemandeDto>>();
+            var result = await response.Content.ReadFromJsonAsync<PagedResult<DemandeDto>>();
+            
+            if (result is not null)
+            {
+                _demandes = result.Items;
+                _totalPages = result.TotalPages;
+            }
         }
         catch (Exception)
         {
@@ -191,6 +288,12 @@ else
         {
             _isLoading = false;
         }
+    }
+
+    private bool EstNouvelleDemande(int demandeId)
+    {
+        return ResponsableNotificationStateService
+            .EstNouvelleDemande(demandeId);
     }
 
     private async Task ChargerTechniciens()
@@ -232,11 +335,13 @@ else
 
             if (!response.IsSuccessStatusCode)
             {
-                var details = await response.Content.ReadAsStringAsync();
-                _actionError = $"Erreur : {details}";
+                _actionError = await ApiErrorMessageReader.ReadAsync(response, "Une erreur est survenue lors du traitement de la demande.");
                 _actionErrorDemandeId = demandeId;
                 return;
             }
+
+            ResponsableNotificationStateService
+                .RemoveNouvelleDemandeNotification(demandeId);
 
             await ChargerDemandes();
         }
@@ -299,13 +404,14 @@ else
 
             if (!response.IsSuccessStatusCode)
             {
-                var details = await response.Content.ReadAsStringAsync();
-                _actionError = $"Erreur : {details}";
+                _actionError = await ApiErrorMessageReader.ReadAsync(response, "Une erreur est survenue lors de la planification.");
                 _actionErrorDemandeId = demandeId;
                 return;
             }
 
             _demandeEnPlanificationId = null;
+            ResponsableNotificationStateService
+                .RemoveNouvelleDemandeNotification(demandeId);
             await ChargerDemandes();
         }
         catch (Exception)
@@ -337,14 +443,14 @@ else
 
             if (!response.IsSuccessStatusCode)
             {
-                var details = await response.Content.ReadAsStringAsync();
-
-                _actionError = $"Erreur : {details}";
+                _actionError = await ApiErrorMessageReader.ReadAsync(response, "Une erreur est survenue lors de la modification de la planification.");
                 _actionErrorDemandeId = demande.Id;
                 return;
             }
 
             _demandeEnModificationId = null;
+            ResponsableNotificationStateService
+                .RemoveNouvelleDemandeNotification(demande.Id);
 
             await ChargerDemandes();
         }
@@ -372,6 +478,33 @@ else
         _ => "bg-secondary"
     };
 
+    private async Task PagePrecedente()
+    {
+        if (_page <= 1)
+            return;
+
+        _page--;
+        await ChargerDemandes();
+    }
+
+    private async Task PageSuivante()
+    {
+        if (_page >= _totalPages)
+            return;
+
+        _page++;
+        await ChargerDemandes();
+    }
+
+    private async Task AllerAPage(int page)
+    {
+        if (page < 1 || page > _totalPages || page == _page)
+            return;
+
+        _page = page;
+        await ChargerDemandes();
+    }
+
     private class PlanificationModel
     {
         public int TechnicienId { get; set; }
@@ -382,7 +515,7 @@ else
     {
         public DateTime DatePrevue { get; set; }
     }
-
+    
     private class DemandeDto
     {
         public int Id { get; set; }
@@ -404,5 +537,25 @@ else
         public string Email { get; set; } = string.Empty;
         public string Adresse { get; set; } = string.Empty;
         public string Telephone { get; set; } = string.Empty;
+    }
+
+    private class NotificationDto
+    {
+        public int Id { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public DateTime DateCreation { get; set; }
+        public bool EstLue { get; set; }
+        public int? DemandeId { get; set; }
+        public int? InterventionId { get; set; }
+    }
+
+    private class PagedResult<T>
+    {
+        public List<T> Items { get; set; } = [];
+        public int TotalCount { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages { get; set; }
     }
 }
