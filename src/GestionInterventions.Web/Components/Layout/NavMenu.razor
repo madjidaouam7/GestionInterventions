@@ -7,6 +7,7 @@
 @inject IHttpClientFactory HttpClientFactory
 @inject TokenProvider TokenProvider
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NotificationHubService NotificationHubService
 @inject TechnicienNotificationStateService TechnicienNotificationStateService
 @inject ResponsableNotificationStateService ResponsableNotificationStateService
 @inject ResponsableValidationNotificationStateService ResponsableValidationNotificationStateService
@@ -96,26 +97,51 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
-            return;
+        if (firstRender)
+        {
+            TechnicienNotificationStateService.OnStateChanged += HandleNotificationStateChanged;
+            ResponsableNotificationStateService.OnStateChanged += HandleNotificationStateChanged;
+            ResponsableValidationNotificationStateService.OnStateChanged += HandleNotificationStateChanged;
+        }
 
-        TechnicienNotificationStateService.OnStateChanged += HandleNotificationStateChanged;
-        ResponsableValidationNotificationStateService.OnStateChanged += HandleNotificationStateChanged;
+        var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authenticationState.User;
+        if ((user.IsInRole("Technicien") || user.IsInRole("Responsable"))
+            && !NotificationHubService.IsConnected)
+        {
+            await NotificationHubService.StartAsync();
+        }
 
-        await ChargerNotificationsNonLues();
+        if (firstRender)
+        {
+            await ChargerNotificationsNonLues();
 
-        StateHasChanged();
+            StateHasChanged();
+        }
     }
 
     public void Dispose()
     {
         TechnicienNotificationStateService.OnStateChanged -= HandleNotificationStateChanged;
+        ResponsableNotificationStateService.OnStateChanged -= HandleNotificationStateChanged;
         ResponsableValidationNotificationStateService.OnStateChanged -= HandleNotificationStateChanged;
     }
 
     private void HandleNotificationStateChanged()
     {
-        InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(() =>
+        {
+            _unreadNotificationCount = TechnicienNotificationStateService.HasUnreadNouvelleIntervention
+                ? TechnicienNotificationStateService.NewInterventionIds.Count
+                : 0;
+            _unreadDemandeNotificationCount = ResponsableNotificationStateService.HasUnreadNouvelleDemande
+                ? ResponsableNotificationStateService.NouvelleDemandeIds.Count
+                : 0;
+            _unreadValidationNotificationCount = ResponsableValidationNotificationStateService.HasUnreadInterventionTerminee
+                ? ResponsableValidationNotificationStateService.InterventionIds.Count
+                : 0;
+            StateHasChanged();
+        });
     }
 
     private async Task ChargerNotificationsNonLues()

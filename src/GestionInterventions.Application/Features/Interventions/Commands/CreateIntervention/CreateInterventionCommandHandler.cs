@@ -13,14 +13,16 @@ public class CreateInterventionCommandHandler : IRequestHandler<CreateInterventi
     private readonly ITechnicienRepository _technicienRepository;
     private readonly IDemandeInterventionRepository _demandeInterventionRepository;
     private readonly INotificationRepository _notificationRepository;
+    private readonly GestionInterventions.Application.Common.Interfaces.INotificationPublisher _notificationPublisher;
     private readonly IUnitOfWork _unitOfWork;
 
-    public CreateInterventionCommandHandler(IInterventionRepository interventionRepository, ITechnicienRepository technicienRepository, IDemandeInterventionRepository demandeInterventionRepository, INotificationRepository notificationRepository, IUnitOfWork unitOfWork)
+    public CreateInterventionCommandHandler(IInterventionRepository interventionRepository, ITechnicienRepository technicienRepository, IDemandeInterventionRepository demandeInterventionRepository, INotificationRepository notificationRepository, IUnitOfWork unitOfWork, GestionInterventions.Application.Common.Interfaces.INotificationPublisher notificationPublisher)
     {
         _interventionRepository = interventionRepository;
         _demandeInterventionRepository = demandeInterventionRepository;
         _technicienRepository = technicienRepository;
         _notificationRepository = notificationRepository;
+        _notificationPublisher = notificationPublisher;
         _unitOfWork = unitOfWork;
     }
 
@@ -49,6 +51,11 @@ public class CreateInterventionCommandHandler : IRequestHandler<CreateInterventi
 
         await _notificationRepository.AddAsync(notification, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _notificationPublisher.PublierNouvelleInterventionAsync(
+            intervention.Id,
+            "Une nouvelle intervention vous a été planifiée.",
+            cancellationToken);
 
         return intervention.Id;
     }

@@ -35,6 +35,8 @@ public class CreateInterventionCommandHandlerTests
         var interventionRepositoryMock = new Mock<IInterventionRepository>();
         var demandeInterventionRepositoryMock = new Mock<IDemandeInterventionRepository>();
         var technicienRepositoryMock = new Mock<ITechnicienRepository>();
+        var notificationRepositoryMock = new Mock<INotificationRepository>();
+        var notificationPublisherMock = new Mock<INotificationPublisher>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
 
         demandeInterventionRepositoryMock
@@ -49,7 +51,9 @@ public class CreateInterventionCommandHandlerTests
             interventionRepositoryMock.Object,
             technicienRepositoryMock.Object,
             demandeInterventionRepositoryMock.Object,
-            unitOfWorkMock.Object
+            notificationRepositoryMock.Object,
+            unitOfWorkMock.Object,
+            notificationPublisherMock.Object
         );
 
         var command = new CreateInterventionCommand(
@@ -79,6 +83,14 @@ public class CreateInterventionCommandHandlerTests
 
         unitOfWorkMock.Verify(
             x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Exactly(2)
+        );
+
+        notificationPublisherMock.Verify(
+            x => x.PublierNouvelleInterventionAsync(
+                result,
+                "Une nouvelle intervention vous a été planifiée.",
+                It.IsAny<CancellationToken>()),
             Times.Once
         );
     }
@@ -91,6 +103,7 @@ public class CreateInterventionCommandHandlerTests
         var interventionRepositoryMock = new Mock<IInterventionRepository>();
         var demandeInterventionRepositoryMock = new Mock<IDemandeInterventionRepository>();
         var technicienRepositoryMock = new Mock<ITechnicienRepository>();
+        var notificationRepositoryMock = new Mock<INotificationRepository>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
 
         demandeInterventionRepositoryMock
@@ -101,7 +114,9 @@ public class CreateInterventionCommandHandlerTests
             interventionRepositoryMock.Object,
             technicienRepositoryMock.Object,
             demandeInterventionRepositoryMock.Object,
-            unitOfWorkMock.Object
+            notificationRepositoryMock.Object,
+            unitOfWorkMock.Object,
+            Mock.Of<INotificationPublisher>()
         );
 
         var command = new CreateInterventionCommand(
@@ -160,6 +175,7 @@ public class CreateInterventionCommandHandlerTests
         var interventionRepositoryMock = new Mock<IInterventionRepository>();
         var demandeInterventionRepositoryMock = new Mock<IDemandeInterventionRepository>();
         var technicienRepositoryMock = new Mock<ITechnicienRepository>();
+        var notificationRepositoryMock = new Mock<INotificationRepository>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
 
         demandeInterventionRepositoryMock
@@ -174,7 +190,9 @@ public class CreateInterventionCommandHandlerTests
             interventionRepositoryMock.Object,
             technicienRepositoryMock.Object,
             demandeInterventionRepositoryMock.Object,
-            unitOfWorkMock.Object
+            notificationRepositoryMock.Object,
+            unitOfWorkMock.Object,
+            Mock.Of<INotificationPublisher>()
         );
 
         var command = new CreateInterventionCommand(
@@ -232,6 +250,7 @@ public class CreateInterventionCommandHandlerTests
         var interventionRepositoryMock = new Mock<IInterventionRepository>();
         var demandeInterventionRepositoryMock = new Mock<IDemandeInterventionRepository>();
         var technicienRepositoryMock = new Mock<ITechnicienRepository>();
+        var notificationRepositoryMock = new Mock<INotificationRepository>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
 
         demandeInterventionRepositoryMock
@@ -246,7 +265,9 @@ public class CreateInterventionCommandHandlerTests
             interventionRepositoryMock.Object,
             technicienRepositoryMock.Object,
             demandeInterventionRepositoryMock.Object,
-            unitOfWorkMock.Object
+            notificationRepositoryMock.Object,
+            unitOfWorkMock.Object,
+            Mock.Of<INotificationPublisher>()
         );
 
         var command = new CreateInterventionCommand(

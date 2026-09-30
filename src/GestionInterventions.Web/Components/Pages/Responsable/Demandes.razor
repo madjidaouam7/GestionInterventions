@@ -228,6 +228,7 @@ else
 
     private string? _actionError;
     private int? _actionErrorDemandeId;
+    private bool _notificationRefreshPending;
 
 
     protected override void OnInitialized()
@@ -238,7 +239,23 @@ else
 
     private void HandleNotificationStateChanged()
     {
-        InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(async () =>
+        {
+            if (ResponsableNotificationStateService.HasUnreadNouvelleDemande)
+            {
+                if (_demandes is null || _isLoading)
+                {
+                    _notificationRefreshPending = true;
+                }
+                else
+                {
+                    _page = 1;
+                    await ChargerDemandes();
+                }
+            }
+
+            StateHasChanged();
+        });
     }
 
     public void Dispose()
@@ -252,6 +269,13 @@ else
     protected override async Task OnInitializedAsync()
     {
         await ChargerDemandes();
+        if (_notificationRefreshPending)
+        {
+            _notificationRefreshPending = false;
+            _page = 1;
+            await ChargerDemandes();
+        }
+
         await ChargerTechniciens();
     }
 

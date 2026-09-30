@@ -1,8 +1,10 @@
 namespace GestionInterventions.Web.Services;
 
-public class TechnicienNotificationStateService
+public class TechnicienNotificationStateService : IDisposable
 {
+    private readonly NotificationHubService _notificationHubService;
     private bool _hasUnreadNouvelleIntervention;
+    private bool _hasLiveNouvelleIntervention;
     private bool _afaireFilterConsulted;
     private bool _hasUnconsultedAfaireNotification;
     private List<int> _newInterventionIds = new();
@@ -39,6 +41,24 @@ public class TechnicienNotificationStateService
 
     public event Action? OnStateChanged;
 
+    public TechnicienNotificationStateService(NotificationHubService notificationHubService)
+    {
+        _notificationHubService = notificationHubService;
+        _notificationHubService.NotificationNouvelleInterventionReceived += HandleNouvelleIntervention;
+    }
+
+    private void HandleNouvelleIntervention(int interventionId, string message)
+    {
+        _hasLiveNouvelleIntervention = true;
+        _newInterventionIds = _newInterventionIds.Append(interventionId).Distinct().ToList();
+        SetUnreadState(true);
+    }
+
+    public void Dispose()
+    {
+        _notificationHubService.NotificationNouvelleInterventionReceived -= HandleNouvelleIntervention;
+    }
+
     public void SetUnreadState(bool hasUnreadNouvelleIntervention)
     {
         if (hasUnreadNouvelleIntervention)
@@ -49,19 +69,26 @@ public class TechnicienNotificationStateService
             return;
         }
 
-        _hasUnconsultedAfaireNotification = false;
-        HasUnreadNouvelleIntervention = false;
-        AfaireFilterConsulted = true;
+        if (!_hasLiveNouvelleIntervention)
+        {
+            _hasUnconsultedAfaireNotification = false;
+            HasUnreadNouvelleIntervention = false;
+            AfaireFilterConsulted = true;
+        }
     }
 
     public void MarkNavbarNotificationsAsRead()
     {
+        _hasLiveNouvelleIntervention = false;
         HasUnreadNouvelleIntervention = false;
     }
 
     public void SetNewInterventionIds(IEnumerable<int> interventionIds)
     {
-        _newInterventionIds = interventionIds.Distinct().ToList();
+        _newInterventionIds = _newInterventionIds
+            .Concat(interventionIds)
+            .Distinct()
+            .ToList();
         NotifyStateChanged();
     }
 
@@ -76,6 +103,7 @@ public class TechnicienNotificationStateService
 
     public void MarkAfaireNotificationsAsRead()
     {
+        _hasLiveNouvelleIntervention = false;
         _hasUnconsultedAfaireNotification = false;
         AfaireFilterConsulted = true;
         HasUnreadNouvelleIntervention = false;

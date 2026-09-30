@@ -12,15 +12,17 @@ public class CreateDemandeInterventionCommandHandler : IRequestHandler<CreateDem
     private readonly INotificationRepository _notificationRepository;
     private readonly IIdentityService _identityService;
     private readonly IAdminConfiguration _adminConfiguration;
+    private readonly Common.Interfaces.INotificationPublisher _notificationPublisher;
     private readonly IUnitOfWork _unitOfWork;
 
-    public CreateDemandeInterventionCommandHandler(IDemandeInterventionRepository demandeInterventionRepository, IEquipementRepository equipementRepository, INotificationRepository notificationRepository, IIdentityService identityService, IAdminConfiguration adminConfiguration, IUnitOfWork unitOfWork)
+    public CreateDemandeInterventionCommandHandler(IDemandeInterventionRepository demandeInterventionRepository, IEquipementRepository equipementRepository, INotificationRepository notificationRepository, IIdentityService identityService, IAdminConfiguration adminConfiguration, Common.Interfaces.INotificationPublisher notificationPublisher, IUnitOfWork unitOfWork)
     {
         _demandeInterventionRepository = demandeInterventionRepository;
         _equipementRepository = equipementRepository;
         _notificationRepository = notificationRepository;
         _identityService = identityService;
         _adminConfiguration = adminConfiguration;
+        _notificationPublisher = notificationPublisher;
         _unitOfWork = unitOfWork;
     }
 
@@ -43,6 +45,8 @@ public class CreateDemandeInterventionCommandHandler : IRequestHandler<CreateDem
         var notification = new Notification(responsableUserId, "NouvelleDemande", "Une nouvelle demande a été décalrée.", demandeIntervention.Id);
         await _notificationRepository.AddAsync(notification, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _notificationPublisher.PublierNouvelleDemandeAsync(demandeIntervention.Id, "Une nouvelle demande a été déclarée.", cancellationToken);
 
         return demandeIntervention.Id;
     }

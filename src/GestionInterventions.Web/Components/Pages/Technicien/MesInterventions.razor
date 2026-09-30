@@ -215,6 +215,7 @@ else
 
     private string? _actionError;
     private int? _actionErrorInterventionId;
+    private bool _notificationRefreshPending;
 
     [SupplyParameterFromQuery(Name = "filter")]
     public string? Filter { get; set; }
@@ -250,11 +251,27 @@ else
     protected override async Task OnInitializedAsync()
     {
         await ChargerInterventions();
+        if (_notificationRefreshPending)
+        {
+            _notificationRefreshPending = false;
+            await ChargerInterventions();
+        }
     }
 
     private void HandleTechnicienNotificationStateChanged()
     {
-        InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(async () =>
+        {
+            if (TechnicienNotificationStateService.NewInterventionIds.Count > 0)
+            {
+                if (_interventions is null || _isLoading)
+                    _notificationRefreshPending = true;
+                else
+                    await ChargerInterventions();
+            }
+
+            StateHasChanged();
+        });
     }
 
     private async Task ChargerInterventions()

@@ -14,6 +14,7 @@ using Microsoft.OpenApi.Models;
 using GestionInterventions.Api.Services;
 using GestionInterventions.Infrastructure.Persistence.Repositories;
 using GestionInterventions.Infrastructure.Configuration;
+using GestionInterventions.Api.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +38,9 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(
             new JsonStringEnumConverter());
     });
+
+builder.Services.AddSignalR();
+
 
 builder.Services.AddEndpointsApiExplorer();
 
@@ -142,7 +146,6 @@ builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
 
 
-
 // =========================
 // Repositories + Services
 // =========================
@@ -157,6 +160,7 @@ builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IAdminConfiguration, AdminConfiguration>();
+builder.Services.AddScoped<GestionInterventions.Application.Common.Interfaces.INotificationPublisher, SignalRNotificationPublisher>();
 
 var app = builder.Build();
 
@@ -188,5 +192,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.Run();

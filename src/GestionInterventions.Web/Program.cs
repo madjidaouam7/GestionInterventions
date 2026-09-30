@@ -15,7 +15,7 @@ builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
 builder.Services.AddScoped<TechnicienNotificationStateService>();
 builder.Services.AddScoped<ResponsableNotificationStateService>();
 builder.Services.AddScoped<ResponsableValidationNotificationStateService>();
-
+builder.Services.AddScoped<NotificationHubService>();
 
 builder.Services.AddAuthorizationCore();
 builder.Services.AddCascadingAuthenticationState();

@@ -89,6 +89,7 @@ else
 
     private string? _actionError;
     private int? _actionErrorInterventionId;
+    private bool _notificationRefreshPending;
 
     protected override void OnInitialized()
     {
@@ -98,7 +99,18 @@ else
 
     private void HandleNotificationStateChanged()
     {
-        InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(async () =>
+        {
+            if (ResponsableValidationNotificationStateService.HasUnreadInterventionTerminee)
+            {
+                if (_interventions is null || _isLoading)
+                    _notificationRefreshPending = true;
+                else
+                    await ChargerInterventions();
+            }
+
+            StateHasChanged();
+        });
     }
 
     public void Dispose()
@@ -112,6 +124,11 @@ else
     protected override async Task OnInitializedAsync()
     {
         await ChargerInterventions();
+        if (_notificationRefreshPending)
+        {
+            _notificationRefreshPending = false;
+            await ChargerInterventions();
+        }
     }
 
     private async Task ChargerInterventions()

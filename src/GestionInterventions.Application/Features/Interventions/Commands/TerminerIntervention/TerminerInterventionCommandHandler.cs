@@ -13,14 +13,16 @@ public class TerminerInterventionCommandHandler : IRequestHandler<TerminerInterv
     private readonly IIdentityService _identityService;
     private readonly IAdminConfiguration _adminConfiguration;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly GestionInterventions.Application.Common.Interfaces.INotificationPublisher _notificationPublisher;
 
-    public TerminerInterventionCommandHandler(IInterventionRepository interventionRepository, INotificationRepository notificationRepository, IIdentityService identityService, IAdminConfiguration adminConfiguration, IUnitOfWork unitOfWork)
+    public TerminerInterventionCommandHandler(IInterventionRepository interventionRepository, INotificationRepository notificationRepository, IIdentityService identityService, IAdminConfiguration adminConfiguration, IUnitOfWork unitOfWork, GestionInterventions.Application.Common.Interfaces.INotificationPublisher notificationPublisher)
     {
         _interventionRepository = interventionRepository;
         _notificationRepository = notificationRepository;
         _identityService = identityService;
         _adminConfiguration = adminConfiguration;
         _unitOfWork = unitOfWork;
+        _notificationPublisher = notificationPublisher;
     }
 
     public async Task<int> Handle(TerminerInterventionCommand request, CancellationToken cancellationToken)
@@ -52,6 +54,11 @@ public class TerminerInterventionCommandHandler : IRequestHandler<TerminerInterv
         var notification = new Notification(responsableUserId, "InterventionTerminee", "Une intervention est terminée et attend votre validation.", null, intervention.Id);
         await _notificationRepository.AddAsync(notification, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _notificationPublisher.PublierInterventionTermineeAsync(
+            intervention.Id,
+            "Une intervention est terminée et attend votre validation.",
+            cancellationToken);
 
         return intervention.Id;
     }

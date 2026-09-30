@@ -27,15 +27,30 @@ public class TerminerInterventionCommandHandlerTests
         idProperty.SetValue(intervention, 1);
 
         var interventionRepositoryMock = new Mock<IInterventionRepository>();
+        var notificationRepositoryMock = new Mock<INotificationRepository>();
+        var identityServiceMock = new Mock<IIdentityService>();
+        var adminConfigurationMock = new Mock<IAdminConfiguration>();
+        var notificationPublisherMock = new Mock<INotificationPublisher>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
 
         interventionRepositoryMock
             .Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(intervention);
 
+        identityServiceMock
+            .Setup(x => x.GetUserIdByEmailAsync(It.IsAny<string>()))
+            .ReturnsAsync("responsable-user-id");
+        adminConfigurationMock
+            .SetupGet(x => x.Email)
+            .Returns("responsable@example.com");
+
         var handler = new TerminerInterventionCommandHandler(
             interventionRepositoryMock.Object,
-            unitOfWorkMock.Object
+            notificationRepositoryMock.Object,
+            identityServiceMock.Object,
+            adminConfigurationMock.Object,
+            unitOfWorkMock.Object,
+            notificationPublisherMock.Object
         );
 
         var command = new TerminerInterventionCommand(
@@ -80,6 +95,14 @@ public class TerminerInterventionCommandHandlerTests
 
         unitOfWorkMock.Verify(
             x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Exactly(2)
+        );
+
+        notificationPublisherMock.Verify(
+            x => x.PublierInterventionTermineeAsync(
+                result,
+                "Une intervention est terminée et attend votre validation.",
+                It.IsAny<CancellationToken>()),
             Times.Once
         );
     }
@@ -123,15 +146,29 @@ public class TerminerInterventionCommandHandlerTests
         demandeProperty.SetValue(intervention, demande);
 
         var interventionRepositoryMock = new Mock<IInterventionRepository>();
+        var notificationRepositoryMock = new Mock<INotificationRepository>();
+        var identityServiceMock = new Mock<IIdentityService>();
+        var adminConfigurationMock = new Mock<IAdminConfiguration>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
 
         interventionRepositoryMock
             .Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(intervention);
 
+        identityServiceMock
+            .Setup(x => x.GetUserIdByEmailAsync(It.IsAny<string>()))
+            .ReturnsAsync("responsable-user-id");
+        adminConfigurationMock
+            .SetupGet(x => x.Email)
+            .Returns("responsable@example.com");
+
         var handler = new TerminerInterventionCommandHandler(
             interventionRepositoryMock.Object,
-            unitOfWorkMock.Object
+            notificationRepositoryMock.Object,
+            identityServiceMock.Object,
+            adminConfigurationMock.Object,
+            unitOfWorkMock.Object,
+            Mock.Of<INotificationPublisher>()
         );
 
         var command = new TerminerInterventionCommand(
@@ -162,7 +199,7 @@ public class TerminerInterventionCommandHandlerTests
 
         unitOfWorkMock.Verify(
             x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
-            Times.Once
+            Times.Exactly(2)
         );
     }
 
@@ -172,6 +209,9 @@ public class TerminerInterventionCommandHandlerTests
     {
         // Arrange
         var interventionRepositoryMock = new Mock<IInterventionRepository>();
+        var notificationRepositoryMock = new Mock<INotificationRepository>();
+        var identityServiceMock = new Mock<IIdentityService>();
+        var adminConfigurationMock = new Mock<IAdminConfiguration>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
 
         interventionRepositoryMock
@@ -180,7 +220,11 @@ public class TerminerInterventionCommandHandlerTests
 
         var handler = new TerminerInterventionCommandHandler(
             interventionRepositoryMock.Object,
-            unitOfWorkMock.Object
+            notificationRepositoryMock.Object,
+            identityServiceMock.Object,
+            adminConfigurationMock.Object,
+            unitOfWorkMock.Object,
+            Mock.Of<INotificationPublisher>()
         );
 
         var command = new TerminerInterventionCommand(
@@ -222,6 +266,9 @@ public class TerminerInterventionCommandHandlerTests
         );
 
         var interventionRepositoryMock = new Mock<IInterventionRepository>();
+        var notificationRepositoryMock = new Mock<INotificationRepository>();
+        var identityServiceMock = new Mock<IIdentityService>();
+        var adminConfigurationMock = new Mock<IAdminConfiguration>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
 
         interventionRepositoryMock
@@ -230,7 +277,11 @@ public class TerminerInterventionCommandHandlerTests
 
         var handler = new TerminerInterventionCommandHandler(
             interventionRepositoryMock.Object,
-            unitOfWorkMock.Object
+            notificationRepositoryMock.Object,
+            identityServiceMock.Object,
+            adminConfigurationMock.Object,
+            unitOfWorkMock.Object,
+            Mock.Of<INotificationPublisher>()
         );
 
         var command = new TerminerInterventionCommand(

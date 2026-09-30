@@ -24,7 +24,16 @@ public class CreateDemandeInterventionCommandHandlerTests
 
         var equipementRepositoryMock = new Mock<IEquipementRepository>();
         var demandeRepositoryMock = new Mock<IDemandeInterventionRepository>();
+        var notificationRepositoryMock = new Mock<INotificationRepository>();
+        var identityServiceMock = new Mock<IIdentityService>();
+        var adminConfigurationMock = new Mock<IAdminConfiguration>();
+        var notificationPublisherMock = new Mock<INotificationPublisher>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+        adminConfigurationMock.SetupGet(x => x.Email).Returns("admin@example.com");
+        identityServiceMock
+            .Setup(x => x.GetUserIdByEmailAsync("admin@example.com"))
+            .ReturnsAsync("responsable-id");
 
         equipementRepositoryMock
             .Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>()))
@@ -33,6 +42,10 @@ public class CreateDemandeInterventionCommandHandlerTests
         var handler = new CreateDemandeInterventionCommandHandler(
             demandeRepositoryMock.Object,
             equipementRepositoryMock.Object,
+            notificationRepositoryMock.Object,
+            identityServiceMock.Object,
+            adminConfigurationMock.Object,
+            notificationPublisherMock.Object,
             unitOfWorkMock.Object
         );
 
@@ -70,6 +83,14 @@ public class CreateDemandeInterventionCommandHandlerTests
 
         unitOfWorkMock.Verify(
             x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Exactly(2)
+        );
+
+        notificationPublisherMock.Verify(
+            x => x.PublierNouvelleDemandeAsync(
+                result,
+                "Une nouvelle demande a été déclarée.",
+                It.IsAny<CancellationToken>()),
             Times.Once
         );
     }
@@ -81,6 +102,10 @@ public class CreateDemandeInterventionCommandHandlerTests
         // Arrange
         var equipementRepositoryMock = new Mock<IEquipementRepository>();
         var demandeRepositoryMock = new Mock<IDemandeInterventionRepository>();
+        var notificationRepositoryMock = new Mock<INotificationRepository>();
+        var identityServiceMock = new Mock<IIdentityService>();
+        var adminConfigurationMock = new Mock<IAdminConfiguration>();
+        var notificationPublisherMock = new Mock<INotificationPublisher>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
 
         equipementRepositoryMock
@@ -90,6 +115,10 @@ public class CreateDemandeInterventionCommandHandlerTests
         var handler = new CreateDemandeInterventionCommandHandler(
             demandeRepositoryMock.Object,
             equipementRepositoryMock.Object,
+            notificationRepositoryMock.Object,
+            identityServiceMock.Object,
+            adminConfigurationMock.Object,
+            notificationPublisherMock.Object,
             unitOfWorkMock.Object
         );
 
@@ -138,6 +167,10 @@ public class CreateDemandeInterventionCommandHandlerTests
 
         var equipementRepositoryMock = new Mock<IEquipementRepository>();
         var demandeRepositoryMock = new Mock<IDemandeInterventionRepository>();
+        var notificationRepositoryMock = new Mock<INotificationRepository>();
+        var identityServiceMock = new Mock<IIdentityService>();
+        var adminConfigurationMock = new Mock<IAdminConfiguration>();
+        var notificationPublisherMock = new Mock<INotificationPublisher>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
 
         equipementRepositoryMock
@@ -147,6 +180,10 @@ public class CreateDemandeInterventionCommandHandlerTests
         var handler = new CreateDemandeInterventionCommandHandler(
             demandeRepositoryMock.Object,
             equipementRepositoryMock.Object,
+            notificationRepositoryMock.Object,
+            identityServiceMock.Object,
+            adminConfigurationMock.Object,
+            notificationPublisherMock.Object,
             unitOfWorkMock.Object
         );
 
