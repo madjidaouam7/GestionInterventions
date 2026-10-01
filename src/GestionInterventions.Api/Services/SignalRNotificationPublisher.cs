@@ -25,6 +25,7 @@ public class SignalRNotificationPublisher : INotificationPublisher
             cancellationToken);
     }
 
+
     public Task PublierNouvelleInterventionAsync(
         int interventionId,
         string message,
@@ -36,6 +37,7 @@ public class SignalRNotificationPublisher : INotificationPublisher
             message,
             cancellationToken);
     }
+
 
     public Task PublierInterventionTermineeAsync(
         int interventionId,

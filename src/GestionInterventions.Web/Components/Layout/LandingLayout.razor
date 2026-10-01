@@ -1,0 +1,91 @@
+@inherits LayoutComponentBase
+
+<div class="landing-layout">
+
+    <header class="landing-navbar">
+
+        <a href="/" class="landing-logo">
+            <span class="logo-icon">GI</span>
+            <span>GestionInterventions</span>
+        </a>
+
+        <nav class="landing-nav-links">
+
+            <a href="/#fonctionnalites">
+                Fonctionnalités
+            </a>
+
+            <a href="/#comment-ca-marche">
+                Comment ça marche
+            </a>
+
+            <a href="/#roles">
+                Pour qui ?
+            </a>
+
+            <a href="/#a-propos">
+                À propos
+            </a>
+
+        </nav>
+
+        <div class="landing-nav-actions">
+
+            <button type="button" class="btn-login" @onclick="OpenLogin">
+                Connexion
+            </button>
+
+            <button type="button" class="btn-register" @onclick="OpenRegister">
+                Inscription
+            </button>
+
+        </div>
+
+    </header>
+
+    <main>
+        @Body
+    </main>
+
+</div>
+
+<Modal Titre="@(_authModalMode == AuthModalMode.Login ? "Connexion" : "Inscription")"
+       Visible="@_showAuthModal" OnClose="CloseAuthModal">
+    @if (_authModalMode == AuthModalMode.Login)
+    {
+        <LoginForm InModal="true" OnSwitchToRegister="OpenRegister" />
+    }
+    else
+    {
+        <RegisterForm InModal="true" OnSwitchToLogin="OpenLogin" />
+    }
+</Modal>
+
+@code {
+    private bool _showAuthModal;
+    private AuthModalMode _authModalMode;
+
+    private void OpenLogin()
+    {
+        _authModalMode = AuthModalMode.Login;
+        _showAuthModal = true;
+    }
+
+    private void OpenRegister()
+    {
+        _authModalMode = AuthModalMode.Register;
+        _showAuthModal = true;
+    }
+
+    private Task CloseAuthModal()
+    {
+        _showAuthModal = false;
+        return Task.CompletedTask;
+    }
+
+    private enum AuthModalMode
+    {
+        Login,
+        Register
+    }
+}

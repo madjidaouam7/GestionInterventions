@@ -89,6 +89,14 @@ public class TechnicienNotificationStateService : IDisposable
             .Concat(interventionIds)
             .Distinct()
             .ToList();
+
+        if (_newInterventionIds.Count > 0)
+        {
+            _hasUnconsultedAfaireNotification = true;
+            AfaireFilterConsulted = false;
+            HasUnreadNouvelleIntervention = true;
+        }
+
         NotifyStateChanged();
     }
 

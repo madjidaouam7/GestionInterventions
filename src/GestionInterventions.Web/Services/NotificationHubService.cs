@@ -21,9 +21,7 @@ public class NotificationHubService : IAsyncDisposable
             .Build();
 
         _connection.On<int, string>("NouvelleDemande", (demandeId, message) =>
-        {
-            NotificationNouvelleDemandeReceived?.Invoke(demandeId, message);
-        });
+            NotificationNouvelleDemandeReceived?.Invoke(demandeId, message));
 
         _connection.On<int, string>("NouvelleIntervention", (interventionId, message) =>
             NotificationNouvelleInterventionReceived?.Invoke(interventionId, message));

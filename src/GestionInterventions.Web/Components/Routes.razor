@@ -26,6 +26,7 @@
             var routePath = relativeUrl.Split('?', '#')[0].Trim('/');
 
             if (authenticationState.User.Identity?.IsAuthenticated != true &&
+                !string.IsNullOrEmpty(routePath) &&
                 !routePath.Equals("login", StringComparison.OrdinalIgnoreCase) &&
                 !routePath.Equals("register", StringComparison.OrdinalIgnoreCase))
             {

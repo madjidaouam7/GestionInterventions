@@ -233,8 +233,7 @@ else
 
     protected override void OnInitialized()
     {
-        ResponsableNotificationStateService.OnStateChanged +=
-            HandleNotificationStateChanged;
+        ResponsableNotificationStateService.OnStateChanged += HandleNotificationStateChanged;
     }
 
     private void HandleNotificationStateChanged()
@@ -260,10 +259,8 @@ else
 
     public void Dispose()
     {
-        ResponsableNotificationStateService.OnStateChanged -=
-            HandleNotificationStateChanged;
-        ResponsableNotificationStateService
-            .ClearNouvelleDemandeNotifications();
+        ResponsableNotificationStateService.OnStateChanged -= HandleNotificationStateChanged;
+        ResponsableNotificationStateService.ClearNouvelleDemandeNotifications();
     }
     
     protected override async Task OnInitializedAsync()
@@ -316,8 +313,7 @@ else
 
     private bool EstNouvelleDemande(int demandeId)
     {
-        return ResponsableNotificationStateService
-            .EstNouvelleDemande(demandeId);
+        return ResponsableNotificationStateService.EstNouvelleDemande(demandeId);
     }
 
     private async Task ChargerTechniciens()
@@ -364,8 +360,7 @@ else
                 return;
             }
 
-            ResponsableNotificationStateService
-                .RemoveNouvelleDemandeNotification(demandeId);
+            ResponsableNotificationStateService.RemoveNouvelleDemandeNotification(demandeId);
 
             await ChargerDemandes();
         }
@@ -434,8 +429,7 @@ else
             }
 
             _demandeEnPlanificationId = null;
-            ResponsableNotificationStateService
-                .RemoveNouvelleDemandeNotification(demandeId);
+            ResponsableNotificationStateService.RemoveNouvelleDemandeNotification(demandeId);
             await ChargerDemandes();
         }
         catch (Exception)
@@ -473,8 +467,7 @@ else
             }
 
             _demandeEnModificationId = null;
-            ResponsableNotificationStateService
-                .RemoveNouvelleDemandeNotification(demande.Id);
+            ResponsableNotificationStateService.RemoveNouvelleDemandeNotification(demande.Id);
 
             await ChargerDemandes();
         }
