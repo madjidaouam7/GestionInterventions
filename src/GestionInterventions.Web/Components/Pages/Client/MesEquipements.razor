@@ -11,6 +11,7 @@
 @inject IHttpClientFactory HttpClientFactory
 @inject AuthenticationStateProvider AuthStateProvider
 @inject GestionInterventions.Web.Authentication.TokenProvider TokenProvider
+@inject IConfiguration Configuration
 
 <PageTitle>Mes équipements</PageTitle>
 
@@ -356,7 +357,10 @@ else
 
     private string GetPhotoUrl(string cheminFichier)
     {
-        return $"http://localhost:5084/{cheminFichier}";
+        var apiBaseUrl = Configuration["Api:BaseUrl"]
+                     ?? "http://localhost:5084/";
+
+        return $"{apiBaseUrl.TrimEnd('/')}/{cheminFichier.TrimStart('/')}";
     }
 
     private void FermerPhotos()
