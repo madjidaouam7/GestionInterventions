@@ -17,6 +17,7 @@ public class Equipement
     public StatutEquipement Statut { get; private set; } = StatutEquipement.Fonctionnel;
 
     public ICollection<DemandeIntervention> Demandes { get; private set; } = new List<DemandeIntervention>();
+    public ICollection<EquipementPhoto> Photos { get; private set; } = new List<EquipementPhoto>();
 
     private Equipement() { } // Pour EF Core
 

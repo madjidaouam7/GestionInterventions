@@ -13,10 +13,15 @@ public class NotificationHubService : IAsyncDisposable
     public event Action<int, string>? NotificationNouvelleInterventionReceived;
     public event Action<int, string>? NotificationInterventionTermineeReceived;
 
-    public NotificationHubService()
+    public NotificationHubService(IConfiguration configuration)
     {
+        var apiBaseUrl = configuration["Api:BaseUrl"]
+            ?? "http://localhost:5084/";
+
+        var hubUrl = apiBaseUrl.TrimEnd('/') + "/hubs/notifications";
+
         _connection = new HubConnectionBuilder()
-            .WithUrl("http://localhost:5084/hubs/notifications")
+            .WithUrl(hubUrl)
             .WithAutomaticReconnect()
             .Build();
 

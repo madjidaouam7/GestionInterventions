@@ -1,11 +1,13 @@
 @page "/mes-equipements"
 
 @attribute [Authorize(Roles = "Client")]
+@using System.Net.Http.Headers
 @using System.Net.Http.Json
+@using GestionInterventions.Application.Common.Models
+@using GestionInterventions.Application.DTOs
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Net.Http.Headers
-@using GestionInterventions.Application.Common.Models
+@using Microsoft.AspNetCore.Components.Forms
 @inject IHttpClientFactory HttpClientFactory
 @inject AuthenticationStateProvider AuthStateProvider
 @inject GestionInterventions.Web.Authentication.TokenProvider TokenProvider
@@ -64,6 +66,58 @@
     </EditForm>
 </Modal>
 
+<Modal Titre="Photos de l'équipement" Visible="@_afficherPhotos" OnClose="FermerPhotos">
+
+    @if (_equipementSelectionne is not null)
+    {
+        @if (_equipementSelectionne.Photos.Count > 0)
+        {
+            <div class="row g-3 mb-4">
+                @foreach (var photo in _equipementSelectionne.Photos)
+                {
+                    <div class="col-md-4">
+                        <div class="card">
+                            <img src="@GetPhotoUrl(photo.CheminFichier)" class="card-img-top" alt="@photo.NomFichier"
+                                 style="height:150px; object-fit:cover; cursor:pointer;" title="Cliquer pour agrandir"
+                                 @onclick="() => AgrandirPhoto(photo.CheminFichier)" />
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="text-muted">
+                Aucune photo pour cet équipement.
+            </p>
+        }
+    }
+
+    <hr />
+
+    <p>
+        Sélectionnez une photo pour cet équipement.
+    </p>
+
+    <InputFile OnChange="SelectionnerFichier" accept=".jpg,.jpeg,.png,.webp" />
+
+</Modal>
+
+@if (_photoAgrandie is not null)
+{
+    <div class="photo-overlay">
+        <div class="photo-toolbar">
+            <button class="btn btn-danger" @onclick="FermerPhotoAgrandie">
+                ✕
+            </button>
+        </div>
+
+        <div class="photo-viewer">
+            <img src="@_photoAgrandie" alt="Photo agrandie" />
+        </div>
+    </div>
+}
+
 @if (_isLoading)
 {
     <p>Chargement...</p>
@@ -86,6 +140,7 @@ else
                 <th>Description</th>
                 <th>Localisation</th>
                 <th>Statut</th>
+                <th>Photos</th>
                 <th></th>
             </tr>
         </thead>
@@ -98,6 +153,11 @@ else
                     <td>@equipement.Description</td>
                     <td>@equipement.Localisation</td>
                     <td><span class="badge @GetStatutEquipementBadgeClass(equipement.Statut)">@equipement.Statut</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="() => OuvrirPhotos(equipement.Id)">
+                            Photos
+                        </button>
+                    </td>
                     <td>
                         <a href="/historique-equipement/@equipement.Id" class="btn btn-sm btn-outline-secondary">
                             Historique
@@ -162,6 +222,10 @@ else
     private int _page = 1;
     private const int _pageSize = 5;
     private int _totalPages;
+    private bool _afficherPhotos;
+    private int _equipementIdSelectionne;
+    private EquipementDto? _equipementSelectionne;
+    private string? _photoAgrandie;
 
 
     private void ToggleFormulaire()
@@ -282,6 +346,88 @@ else
         }
     }
 
+    private void OuvrirPhotos(int equipementId)
+    {
+        _equipementIdSelectionne = equipementId;
+        _afficherPhotos = true;
+        _equipementSelectionne = _equipements?
+        .FirstOrDefault(e => e.Id == equipementId);
+    }
+
+    private string GetPhotoUrl(string cheminFichier)
+    {
+        return $"http://localhost:5084/{cheminFichier}";
+    }
+
+    private void FermerPhotos()
+    {
+        _afficherPhotos = false;
+    }
+
+    private void AgrandirPhoto(string chemin)
+    {
+        _photoAgrandie = GetPhotoUrl(chemin);
+    }
+
+    private void FermerPhotoAgrandie()
+    {
+        _photoAgrandie = null;
+    }
+
+    private async Task SelectionnerFichier(InputFileChangeEventArgs e)
+    {
+        var fichier = e.File;
+
+        if (fichier is null)
+            return;
+
+        _errorMessage = null;
+        _successMessage = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("Api");
+
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenProvider.Token);
+
+            await using var stream = fichier.OpenReadStream(5 * 1024 * 1024);
+
+            using var contenu = new MultipartFormDataContent();
+
+            using var contenuFichier = new StreamContent(stream);
+
+            contenuFichier.Headers.ContentType = new MediaTypeHeaderValue(fichier.ContentType);
+
+            contenu.Add(contenuFichier, "fichier", fichier.Name);
+
+            var response = await client.PostAsync(
+                $"api/Equipements/{_equipementIdSelectionne}/photos",
+                contenu);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = await ApiErrorMessageReader.ReadAsync(response, "Impossible d'ajouter la photo.");
+
+                return;
+            }
+
+            _successMessage = "Photo ajoutée avec succès.";
+            _afficherPhotos = false;
+
+            await InvokeAsync(StateHasChanged);
+
+            _ = FaireDisparaitreMessageSucces();
+        }
+        catch (IOException)
+        {
+            _errorMessage = "Le fichier est trop volumineux ou ne peut pas être lu.";
+        }
+        catch (Exception)
+        {
+            _errorMessage = "Une erreur est survenue lors de l'envoi de la photo.";
+        }
+    }
+
     private async Task PagePrecedente()
     {
         if (_page > 1)
@@ -330,6 +476,15 @@ else
         public string Description { get; set; } = string.Empty;
         public string Localisation { get; set; } = string.Empty;
         public string Statut { get; set; } = string.Empty;
+        public List<EquipementPhotoDto> Photos { get; set; } = new();
+    }
+
+    private class EquipementPhotoDto
+    {
+        public int Id { get; set; }
+        public string NomFichier { get; set; } = string.Empty;
+        public string CheminFichier { get; set; } = string.Empty;
+        public DateTime DateAjout { get; set; }
     }
 
     private class FormModel

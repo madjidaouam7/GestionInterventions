@@ -70,7 +70,7 @@ h1:focus {
     --color-text: #1e293b;
     --color-text-muted: #64748b;
     --sidebar-width: 260px;
-    --topbar-height: 64px;
+    --topbar-height: 80px;
 }
 
 body {
@@ -341,29 +341,13 @@ body {
     white-space: nowrap;
 }
 
-.logo-icon {
-    width: 40px;
-    height: 40px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border-radius: 11px;
-
-    background: linear-gradient(
-        135deg,
-        #052767,
-        #3a0647
-    );
-
-    color: white;
-
-    font-size: 13px;
-    font-weight: 800;
-
-    box-shadow:
-        0 8px 22px rgba(5, 39, 103, 0.2);
+.landing-logo-image {
+    display: block;
+    flex: 0 0 auto;
+    width: 52px;
+    height: 58px;
+    object-fit: contain;
+    object-position: center;
 }
 
 .landing-nav-links {
@@ -1539,6 +1523,42 @@ body {
     white-space: nowrap;
 }
 
+.photo-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(20, 30, 50, 0.25);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.photo-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    padding: 20px;
+}
+
+.photo-viewer {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.photo-viewer img {
+    max-width: 90vw;
+    max-height: 85vh;
+    object-fit: contain;
+}
+
 
 /* =========================================================
    RESPONSIVE
@@ -1643,13 +1663,9 @@ body {
         padding: 0 18px;
     }
 
-    .landing-logo {
-        font-size: 15px;
-    }
-
-    .logo-icon {
-        width: 35px;
-        height: 35px;
+    .landing-logo-image {
+        width: 42px;
+        height: 47px;
     }
 
     .landing-nav-actions {

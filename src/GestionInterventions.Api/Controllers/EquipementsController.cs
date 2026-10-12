@@ -5,6 +5,7 @@ using GestionInterventions.Application.Features.Equipements.Queries.GetAllEquipe
 using GestionInterventions.Application.Features.Equipements.Queries.GetEquipementById;
 using GestionInterventions.Application.Features.Equipements.Queries.GetEquipementsByClient;
 using GestionInterventions.Application.Features.Equipements.Queries.GetHistoriqueEquipement;
+using GestionInterventions.Application.Features.Equipements.Commands.AjouterPhotoEquipement;
 
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -85,5 +86,23 @@ public class EquipementsController : ControllerBase
         var query = new GetAllEquipementsQuery();
         var equipements = await _mediator.Send(query, cancellationToken);
         return Ok(equipements);
+    }
+
+
+    [HttpPost("{equipementId}/photos")]
+    [Authorize(Roles = "Client")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<int>> AjouterPhoto(int equipementId, IFormFile fichier, CancellationToken cancellationToken)
+    {
+        if (fichier is null || fichier.Length == 0)
+            return BadRequest("Aucun fichier n'a été fourni.");
+
+        await using var stream = fichier.OpenReadStream();
+
+        var command = new AjouterPhotoEquipementCommand(equipementId, fichier.FileName, fichier.ContentType, stream);
+
+        var photoId = await _mediator.Send(command, cancellationToken);
+
+        return Ok(photoId);
     }
 }

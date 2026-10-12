@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+.vs/
+.git/
+publish/
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/appsettings.Development.json
+**/wwwroot/uploads/
+docker-api.env

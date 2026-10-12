@@ -80,30 +80,37 @@
 }
 
 .app-modal-body ::deep .auth-form-surface {
+    max-width: 480px;
+    margin: 0 auto;
     color: #172033;
     animation: auth-form-enter 180ms ease-out both;
 }
 
+.app-modal-body ::deep .auth-form-surface-register {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.78fr) minmax(0, 1.22fr);
+    align-items: stretch;
+    gap: 1.5rem;
+    max-width: none;
+    margin: 0;
+}
+
 .app-modal-body ::deep .auth-form-brand {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.8rem;
-    margin-bottom: 1.5rem;
+    gap: 0.55rem;
+    margin-bottom: 1.35rem;
+    text-align: center;
 }
 
 .app-modal-body ::deep .auth-form-logo {
-    display: inline-flex;
-    flex: 0 0 2.75rem;
-    align-items: center;
-    justify-content: center;
-    width: 2.75rem;
-    height: 2.75rem;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #052767, #3a0647);
-    box-shadow: 0 7px 18px rgba(5, 39, 103, 0.18);
-    color: #fff;
-    font-size: 0.9rem;
-    font-weight: 800;
+    display: block;
+    flex: 0 0 auto;
+    width: 60px;
+    height: 68px;
+    object-fit: contain;
+    object-position: center;
 }
 
 .app-modal-body ::deep .auth-form-brand-copy {
@@ -111,19 +118,50 @@
     gap: 0.15rem;
 }
 
-.app-modal-body ::deep .auth-form-brand-copy strong {
-    color: #172033;
-    font-size: 0.95rem;
+.app-modal-body ::deep .auth-form-brand-copy > span {
+    color: #667085;
+    font-size: 0.9rem;
+    font-weight: 550;
+}
+
+.app-modal-body ::deep .auth-form-surface-register .auth-form-brand {
+    justify-content: center;
+    gap: 0.9rem;
+    min-width: 0;
+    margin-bottom: 0;
+    padding: 1.5rem 1.1rem;
+    border: 1px solid #e8e9f3;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #f1f6ff 0%, #f7f2fa 100%);
+}
+
+.app-modal-body ::deep .auth-form-surface-register .auth-form-logo {
+    width: 104px;
+    height: 118px;
+}
+
+.app-modal-body ::deep .auth-form-surface-register .auth-form-brand-copy > span {
+    color: #052767;
+    font-size: 1.05rem;
     font-weight: 700;
 }
 
-.app-modal-body ::deep .auth-form-brand-copy > span {
+.app-modal-body ::deep .auth-form-surface-register .auth-form-brand-copy p {
+    margin: 0.5rem 0 0;
     color: #667085;
-    font-size: 0.82rem;
+    font-size: 0.88rem;
+    line-height: 1.55;
 }
 
 .app-modal-body ::deep .auth-form-content {
     min-width: 0;
+}
+
+.app-modal-body ::deep .auth-form-title {
+    margin: 0 0 1.1rem;
+    color: #172033;
+    font-size: 1.35rem;
+    font-weight: 700;
 }
 
 .app-modal-body ::deep .auth-form-surface label {
@@ -158,6 +196,10 @@
     background: #052767;
     font-weight: 650;
     transition: background-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+}
+
+.app-modal-body ::deep .auth-form-surface-register .auth-submit {
+    width: 100%;
 }
 
 .app-modal-body ::deep .auth-form-surface .auth-submit:hover:not(:disabled) {
@@ -195,39 +237,6 @@
     text-decoration: underline;
 }
 
-.app-modal-body ::deep .auth-register-layout {
-    display: grid;
-    grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.2fr);
-    gap: 1.5rem;
-    align-items: stretch;
-}
-
-.app-modal-body ::deep .auth-register-brand-panel {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 1rem;
-    padding: 1.25rem;
-    border: 1px solid #e6ebf3;
-    border-radius: 9px;
-    background: #f5f7fb;
-}
-
-.app-modal-body ::deep .auth-register-brand-panel h3 {
-    margin: 0;
-    color: #172033;
-    font-size: 1.05rem;
-    font-weight: 700;
-}
-
-.app-modal-body ::deep .auth-register-brand-panel p {
-    margin: 0;
-    color: #667085;
-    font-size: 0.88rem;
-    line-height: 1.55;
-}
-
 @keyframes auth-form-enter {
     from {
         opacity: 0;
@@ -256,26 +265,20 @@
     }
 }
 
-@media (max-width: 680px) {
-    .app-modal-body ::deep .auth-register-layout {
+@media (max-width: 640px) {
+    .app-modal-body ::deep .auth-form-surface-register {
         grid-template-columns: minmax(0, 1fr);
         gap: 1rem;
     }
 
-    .app-modal-body ::deep .auth-register-brand-panel {
-        flex-direction: row;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 0.8rem;
-        padding: 0.85rem;
+    .app-modal-body ::deep .auth-form-surface-register .auth-form-brand {
+        gap: 0.45rem;
+        padding: 0.9rem 1rem;
     }
 
-    .app-modal-body ::deep .auth-register-brand-panel h3 {
-        font-size: 0.95rem;
-    }
-
-    .app-modal-body ::deep .auth-register-brand-panel p {
-        display: none;
+    .app-modal-body ::deep .auth-form-surface-register .auth-form-logo {
+        width: 68px;
+        height: 76px;
     }
 }
 

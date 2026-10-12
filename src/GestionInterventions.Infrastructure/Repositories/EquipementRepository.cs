@@ -28,6 +28,7 @@ public class EquipementRepository : IEquipementRepository
     {
         var query = _context.Equipements
             .Where(e => e.ClientId == clientId)
+            .Include(e => e.Photos)
             .AsQueryable();
 
         var totalCount = await query.CountAsync(cancellationToken);

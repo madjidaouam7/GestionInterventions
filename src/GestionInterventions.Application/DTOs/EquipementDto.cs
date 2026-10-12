@@ -19,7 +19,9 @@ public class EquipementDto
 
     public StatutEquipement Statut { get; set; }
 
-    public EquipementDto(){}
+    public List<EquipementPhotoDto> Photos { get; set; } = new();
+
+    public EquipementDto() { }
     public EquipementDto(Equipement equipement)
     {
         Id = equipement.Id;
@@ -29,5 +31,13 @@ public class EquipementDto
         Localisation = equipement.Localisation;
         ClientId = equipement.ClientId;
         Statut = equipement.Statut;
+        Photos = equipement.Photos.Select(photo => new EquipementPhotoDto
+        {
+            Id = photo.Id,
+            NomFichier = photo.NomFichier,
+            CheminFichier = photo.CheminFichier,
+            DateAjout = photo.DateAjout
+        })
+    .ToList();
     }
 }

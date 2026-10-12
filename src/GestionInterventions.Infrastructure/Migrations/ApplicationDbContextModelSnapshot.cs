@@ -124,6 +124,35 @@ namespace GestionInterventions.Infrastructure.Migrations
                     b.ToTable("Equipements");
                 });
 
+            modelBuilder.Entity("GestionInterventions.Domain.Entities.EquipementPhoto", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CheminFichier")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DateAjout")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EquipementId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("NomFichier")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EquipementId");
+
+                    b.ToTable("EquipementPhoto");
+                });
+
             modelBuilder.Entity("GestionInterventions.Domain.Entities.Intervention", b =>
                 {
                     b.Property<int>("Id")
@@ -439,6 +468,17 @@ namespace GestionInterventions.Infrastructure.Migrations
                     b.Navigation("Client");
                 });
 
+            modelBuilder.Entity("GestionInterventions.Domain.Entities.EquipementPhoto", b =>
+                {
+                    b.HasOne("GestionInterventions.Domain.Entities.Equipement", "Equipement")
+                        .WithMany("Photos")
+                        .HasForeignKey("EquipementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Equipement");
+                });
+
             modelBuilder.Entity("GestionInterventions.Domain.Entities.Intervention", b =>
                 {
                     b.HasOne("GestionInterventions.Domain.Entities.DemandeIntervention", "Demande")
@@ -546,6 +586,8 @@ namespace GestionInterventions.Infrastructure.Migrations
             modelBuilder.Entity("GestionInterventions.Domain.Entities.Equipement", b =>
                 {
                     b.Navigation("Demandes");
+
+                    b.Navigation("Photos");
                 });
 #pragma warning restore 612, 618
         }

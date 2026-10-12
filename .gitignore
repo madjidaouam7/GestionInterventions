@@ -5,6 +5,7 @@
 
 # dotenv files
 .env
+.env.*
 
 # User-specific files
 *.rsuser
@@ -487,7 +488,17 @@ $RECYCLE.BIN/
 *.db
 *.db-shm
 *.db-wal
+backup-photos/
 
 # Configuration locale avec secrets
 appsettings.Development.json
 appsettings.Local.json
+
+docker-api.env
+
+# Fichiers générés par .NET
+**/bin/
+**/obj/
+
+# Photos téléversées par les utilisateurs
+src/GestionInterventions.Api/wwwroot/uploads/

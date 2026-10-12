@@ -22,7 +22,7 @@ builder.Services.AddCascadingAuthenticationState();
 
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultScheme = "BlazorCustomAuth";
+    options.DefaultScheme = "BlazorCustomAuth"; 
     options.DefaultChallengeScheme = "BlazorCustomAuth";
 })
 .AddCookie("BlazorCustomAuth", options =>
@@ -30,9 +30,12 @@ builder.Services.AddAuthentication(options =>
     options.LoginPath = "/login";
 });
 
+var apiBaseUrl = builder.Configuration["Api:BaseUrl"]
+    ?? "http://localhost:5084/";
+
 builder.Services.AddHttpClient("Api", client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5084/");
+    client.BaseAddress = new Uri(apiBaseUrl);
 });
 
 var app = builder.Build();

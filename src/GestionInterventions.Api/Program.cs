@@ -2,6 +2,7 @@ using GestionInterventions.Application.Common.Interfaces;
 using GestionInterventions.Application.Features.Clients.Commands.RegisterClient;
 using GestionInterventions.Infrastructure.Persistence;
 using GestionInterventions.Infrastructure.Repositories;
+using GestionInterventions.Infrastructure.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
@@ -161,6 +162,7 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IAdminConfiguration, AdminConfiguration>();
 builder.Services.AddScoped<GestionInterventions.Application.Common.Interfaces.INotificationPublisher, SignalRNotificationPublisher>();
+builder.Services.AddScoped<IFileStorageService>(sp => new FileStorageService(builder.Environment.WebRootPath ?? Path.Combine(builder.Environment.ContentRootPath, "wwwroot")));
 
 var app = builder.Build();
 
@@ -169,6 +171,10 @@ var app = builder.Build();
 // =========================
 using (var scope = app.Services.CreateScope())
 {
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+    await dbContext.Database.MigrateAsync();
+
     await IdentitySeeder.SeedAsync(scope.ServiceProvider, builder.Configuration);
 }
 
@@ -185,7 +191,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-//app.UseHttpsRedirection();
+app.UseHttpsRedirection();
+
+app.UseStaticFiles();
 
 app.UseAuthentication();
 

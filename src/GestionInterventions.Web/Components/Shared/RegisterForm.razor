@@ -3,17 +3,24 @@
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Navigation
 
-<div class="auth-form-surface @(InModal ? "auth-register-layout" : "")">
+<div class="auth-form-surface @(InModal ? "auth-form-surface-register" : string.Empty)">
     @if (InModal)
     {
-        <aside class="auth-register-brand-panel">
-            <span class="auth-form-logo">GI</span>
-            <h3>Gestion Interventions</h3>
-            <p>Centralisez vos demandes, équipements et interventions dans un espace unique.</p>
-        </aside>
+        <div class="auth-form-brand">
+            <img src="/images/siyana-dz-logo.png" alt="Siyana DZ" class="auth-form-logo" />
+            <span class="auth-form-brand-copy">
+                <span>Bienvenue chez Siyana DZ</span>
+                <p>Centralisez vos demandes, équipements et interventions dans une seule plateforme.</p>
+            </span>
+        </div>
     }
 
     <div class="auth-form-content">
+        @if (InModal)
+        {
+            <h3 class="auth-form-title">Créer un compte</h3>
+        }
+
         <EditForm Model="_formModel" OnValidSubmit="HandleRegister">
             <DataAnnotationsValidator />
             <ValidationSummary />

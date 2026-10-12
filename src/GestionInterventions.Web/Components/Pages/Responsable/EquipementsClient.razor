@@ -15,6 +15,51 @@
 
 <h1>Équipements — Client #@ClientId</h1>
 
+<Modal Titre="Photos de l'équipement" Visible="@_afficherPhotos" OnClose="FermerPhotos">
+
+    @if (_equipementSelectionne is not null)
+    {
+        @if (_equipementSelectionne.Photos.Count > 0)
+        {
+            <div class="row g-3 mb-4">
+                @foreach (var photo in _equipementSelectionne.Photos)
+                {
+                    <div class="col-md-4">
+                        <div class="card">
+                            <img src="@GetPhotoUrl(photo.CheminFichier)" class="card-img-top" alt="@photo.NomFichier"
+                                 style="height:150px; object-fit:cover; cursor:pointer;" title="Cliquer pour agrandir"
+                                 @onclick="() => AgrandirPhoto(photo.CheminFichier)" />
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="text-muted">
+                Aucune photo pour cet équipement.
+            </p>
+        }
+    }
+
+    <hr />
+</Modal>
+
+@if (_photoAgrandie is not null)
+{
+    <div class="photo-overlay">
+        <div class="photo-toolbar">
+            <button class="btn btn-danger" @onclick="FermerPhotoAgrandie">
+                ✕
+            </button>
+        </div>
+
+        <div class="photo-viewer">
+            <img src="@_photoAgrandie" alt="Photo agrandie" />
+        </div>
+    </div>
+}
+
 @if (_isLoading)
 {
     <p>Chargement...</p>
@@ -37,6 +82,7 @@ else
                 <th>Description</th>
                 <th>Localisation</th>
                 <th>Statut</th>
+                <th>Photos</th>
                 <th></th>
             </tr>
         </thead>
@@ -49,6 +95,11 @@ else
                     <td>@equipement.Description</td>
                     <td>@equipement.Localisation</td>
                     <td><span class="badge @GetStatutBadgeClass(equipement.Statut)">@equipement.Statut</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="() => OuvrirPhotos(equipement.Id)">
+                            Photos
+                        </button>
+                    </td>
                     <td>
                         <a href="/clients/@ClientId/equipements/@equipement.Id/historique"
                            class="btn btn-sm btn-outline-secondary">
@@ -113,6 +164,11 @@ else
     private int _page = 1;
     private const int _pageSize = 5;
     private int _totalPages;
+    private bool _afficherPhotos;
+    private int _equipementIdSelectionne;
+    private EquipementDto? _equipementSelectionne;
+    private string? _photoAgrandie;
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -146,6 +202,35 @@ else
             _isLoading = false;
         }
     }
+
+    private void OuvrirPhotos(int equipementId)
+    {
+        _equipementIdSelectionne = equipementId;
+        _afficherPhotos = true;
+        _equipementSelectionne = _equipements?
+        .FirstOrDefault(e => e.Id == equipementId);
+    }
+
+    private string GetPhotoUrl(string cheminFichier)
+    {
+        return $"http://localhost:5084/{cheminFichier}";
+    }
+
+    private void FermerPhotos()
+    {
+        _afficherPhotos = false;
+    }
+
+    private void AgrandirPhoto(string chemin)
+    {
+        _photoAgrandie = GetPhotoUrl(chemin);
+    }
+
+    private void FermerPhotoAgrandie()
+    {
+        _photoAgrandie = null;
+    }
+
 
     private async Task PagePrecedente()
     {
@@ -200,5 +285,14 @@ else
         public string Description { get; set; } = string.Empty;
         public string Localisation { get; set; } = string.Empty;
         public string Statut { get; set; } = string.Empty;
+        public List<EquipementPhotoDto> Photos { get; set; } = new();
+    }
+
+    private class EquipementPhotoDto
+    {
+        public int Id { get; set; }
+        public string NomFichier { get; set; } = string.Empty;
+        public string CheminFichier { get; set; } = string.Empty;
+        public DateTime DateAjout { get; set; }
     }
 }
