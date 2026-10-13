@@ -12,7 +12,7 @@ Le système permet aux clients de déclarer des problèmes sur leurs équipement
 
 Le projet a été réalisé comme projet de formation afin de mettre en pratique une architecture logicielle structurée et des pratiques proches d'un environnement professionnel.
 
-## ## 🌐 Démonstration en ligne
+## 🌐 Démonstration en ligne
 
 L'application est déployée sur Render.
 
