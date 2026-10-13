@@ -197,8 +197,11 @@ L'application permet d'associer des photos aux équipements. Les fichiers sont t
 | Pattern             | CQRS                        |
 | Médiateur           | MediatR                     |
 | Authentification    | ASP.NET Core Identity + JWT |
+| Notifications       | SignalR                     |
+| Conteneurisation    | Docker et Docker Compose    |
 | UI                  | Bootstrap                   |
 | Contrôle de version | Git / GitHub                |
+| Hébergement         | Render                      |
 
 ## 📸 Captures d'écran
 
