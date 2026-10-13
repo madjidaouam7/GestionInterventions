@@ -5,6 +5,16 @@
 @inject NavigationManager Navigation
 
 <div class="app-topbar">
+    <button type="button"
+            class="app-sidebar-toggle"
+            aria-label="@(_navOpen ? "Fermer le menu" : "Ouvrir le menu")"
+            aria-controls="app-sidebar"
+            aria-expanded="@_navOpen"
+            @onclick="ToggleNav">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
     <a href="/accueil" class="landing-logo"><img src="/images/siyana-dz-logo.png" alt="Siyana DZ" class="landing-logo-image" /></a>
 
     <AuthorizeView Context="topbarContext">
@@ -29,22 +39,42 @@
     </AuthorizeView>
 </div>
 
-<div class="d-flex">
-    <div class="app-sidebar">
+<div class="app-shell d-flex">
+    @if (_navOpen)
+    {
+        <button type="button"
+                class="app-sidebar-backdrop"
+                aria-label="Fermer le menu"
+                @onclick="CloseNav">
+        </button>
+    }
+
+    <div id="app-sidebar" class="app-sidebar @(_navOpen ? "is-open" : "")" @onclick="CloseNav">
         <NavMenu />
     </div>
 
-    <main class="flex-grow-1 p-4">
+    <main class="app-main flex-grow-1 p-4">
         @Body
     </main>
 </div>
 
 @code {
     private bool _menuOuvert;
+    private bool _navOpen;
 
     private void ToggleMenu()
     {
         _menuOuvert = !_menuOuvert;
+    }
+
+    private void ToggleNav()
+    {
+        _navOpen = !_navOpen;
+    }
+
+    private void CloseNav()
+    {
+        _navOpen = false;
     }
 
     private async Task HandleLogout()
