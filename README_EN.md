@@ -1,188 +1,201 @@
 # GestionInterventions
 
-🇫🇷 [Français](README.md) | 🇬🇧 **English**
+🇫🇷 [French](README.md) | 🇬🇧 **English**
 
-> A full-stack technical intervention management application built with .NET, following Clean Architecture, CQRS and lightweight Domain-Driven Design principles.
+A full-stack web application for managing technical maintenance interventions, developed with **.NET 8** and based on **Clean Architecture**, **CQRS**, and **Domain-Driven Design (DDD)** principles.
+
+> Individual training and portfolio project, deployed on Render for demonstration purposes.
 
 ## 📋 Overview
 
-**GestionInterventions** is a technical intervention management application designed to handle the complete maintenance lifecycle of a company.
+**GestionInterventions** is a technical maintenance management application that covers the main stages of a company's maintenance lifecycle.
 
-Customers can report issues with their equipment, managers can review and schedule intervention requests, and technicians can perform interventions and submit structured reports.
+Clients can manage their equipment and submit intervention requests. The manager reviews requests, schedules interventions, and assigns technicians. Technicians carry out interventions and submit their reports.
 
-The project was developed as a training project to practice structured software architecture and professional development practices.
+The project was designed to put structured software architecture, separation of concerns, and development practices close to those used in professional environments into practice.
+
+## 🌐 Live Demo
+
+The application is deployed on **Render**.
+
+- **Web Application:** [Access the demo](https://siyana-web-demo.onrender.com/)
+- **REST API:** [Access the API](https://siyana-api-demo.onrender.com/)
+
+> **Note:** This version is hosted on Render's free tier for demonstration purposes. Local storage used for SQLite and uploaded files may be reset after certain restarts or redeployments. Service availability may also vary. This version is therefore not intended for production use with important data.
 
 ## 👥 Roles and Features
 
-### Client
+### 👤 Client
 
-* Account registration and authentication
-* Manage owned equipment
-* Create intervention requests
-* Track request status
-* View equipment history
-* View related interventions and reports
-* Update personal information
+- Account registration and authentication.
+- Manage their equipment.
+- Submit intervention requests.
+- Track the status of their requests.
+- View equipment history.
+- View interventions and their associated reports.
+- Update personal information.
+- Upload and view equipment photos, depending on the features available in the interface.
 
-### Technician
+### 🧑‍🔧 Technician
 
-* View assigned interventions
-* Start an intervention
-* Complete an intervention
-* Submit a structured intervention report
-* Access information related to equipment and requests
+- View assigned interventions.
+- Start and carry out an intervention.
+- Enter a structured intervention report.
+- Submit completed interventions for validation.
+- View information related to equipment and requests.
 
-### Manager
+### 🧑‍💼 Manager
 
-* Review pending intervention requests
-* Accept or reject requests
-* Schedule interventions
-* Assign technicians
-* Modify planned interventions
-* Validate completed interventions
-* Request corrections
-* Manage technicians
-* View clients and interventions
-* View complete equipment history
+- View pending requests.
+- Accept or reject requests.
+- Schedule interventions.
+- Assign technicians.
+- Reschedule planned interventions.
+- Validate completed interventions.
+- Request corrections to an intervention.
+- Manage technicians.
+- View clients and interventions.
+- View equipment history.
+- Receive notifications when new requests are submitted, using SignalR.
 
-Business rules are centralized in the **Domain** layer, including state transitions for requests, equipment and interventions, as well as resource ownership rules.
+Business rules are primarily centralized in the **Domain** layer, including status transitions for requests, equipment, and interventions, as well as business model invariants.
 
 ## 🏗️ Architecture
 
-The project follows **Clean Architecture** with a clear separation of responsibilities.
+The project follows **Clean Architecture**, with clear separation of responsibilities between the business, application, technical, and presentation layers.
 
-GestionInterventions.Domain
-        ↓
-GestionInterventions.Application
-        ↓
-GestionInterventions.Infrastructure
-        ↓
-GestionInterventions.Api
-        ↓
-GestionInterventions.Web
-
+```text
+GestionInterventions/
+├── GestionInterventions.Domain
+├── GestionInterventions.Application
+├── GestionInterventions.Infrastructure
+├── GestionInterventions.Api
+└── GestionInterventions.Web
+```
 
 ### Domain
 
 Contains the core business logic:
 
-* Entities
-* Enums
-* Domain exceptions
-* Value Objects
-* Business rules and invariants
+- Entities and enumerations.
+- Business exceptions.
+- Value Objects.
+- Business rules and invariants.
 
-The Domain layer has no dependency on Entity Framework Core, ASP.NET Core or the UI.
+This layer does not depend on Entity Framework Core, ASP.NET Core, or the user interface.
 
 ### Application
 
 Contains the application's use cases:
 
-* Commands
-* Queries
-* MediatR handlers
-* DTOs
-* Repository interfaces
-* Validation
+- Commands and Queries.
+- MediatR Handlers.
+- DTOs.
+- Repository interfaces.
+- Validation and orchestration of application operations.
 
 ### Infrastructure
 
 Contains technical implementations:
 
-* Entity Framework Core
-* SQLite
-* Repositories
-* Unit of Work
-* ASP.NET Core Identity
-* JWT generation and validation
-* Persistence
+- Entity Framework Core and SQLite.
+- Repository implementations.
+- Data access.
+- ASP.NET Core Identity.
+- Authentication and persistence-related functionality.
 
 ### API
 
-Exposes the application through a REST API:
+Exposes business functionality through a REST API:
 
-* Authentication
-* Clients
-* Technicians
-* Equipment
-* Intervention requests
-* Interventions
-* Global exception handling
+- Client, technician, and equipment management.
+- Intervention requests and interventions.
+- Authentication and authorization.
+- Global error handling.
+- SignalR Hub for real-time notifications.
 
 ### Web
 
-User interface built with **Blazor Web App** and consuming the API.
+User interface developed with **Blazor Web App using Interactive Server rendering**. It consumes the REST API to access application features and uses SignalR for real-time notifications.
 
-## ⚙️ Key Technical Decisions
+## ⚙️ Main Technical Decisions
 
-### CQRS + MediatR
+### CQRS and MediatR
 
-Each use case is represented by an explicit **Command** or **Query**, with a dedicated Handler.
+Application operations are organized around Commands and Queries, each handled by a dedicated Handler.
 
+```text
 Command / Query
        ↓
-    Handler
+     Handler
        ↓
 Repository / Service
        ↓
      Domain
+```
 
+This organization helps separate read operations from write operations and keeps controllers lightweight.
 
-### Repository + Unit of Work
+### Repository and Unit of Work
 
-The Application layer does not directly depend on Entity Framework Core.
-
-Repository interfaces are defined in Application, while their implementations are located in Infrastructure.
+The Application layer depends on abstractions defined by the project rather than directly on Entity Framework Core. Technical implementations are located in the Infrastructure layer.
 
 ### Authentication and Authorization
 
 The application uses:
 
-* ASP.NET Core Identity
-* JWT Bearer Authentication
-* Role-based authorization
-* Resource ownership validation
+- ASP.NET Core Identity.
+- JWT Bearer Authentication.
+- Role-based authorization for Client, Technician, and Manager.
+- Resource access checks based on application rules.
 
-Sensitive configuration values are stored locally using **User Secrets** and are not committed to Git.
+Keys and passwords required for local execution must be configured outside the repository, for example, using **.NET User Secrets**.
 
 ### Domain-Driven Design
 
-The domain model uses:
+The business model relies on entities that encapsulate their own behavior, invariants, business exceptions, and the `CompteRendu` Value Object.
 
-* Behavioral entities
-* Business invariants
-* Domain exceptions
-* `CompteRendu` as a Value Object
-* Explicit business methods
+Examples of business methods:
 
-For example:
+```csharp
+Equipement.SignalerPanne();
+Intervention.Terminer(compteRendu);
+```
 
-Equipement.SignalerPanne()
-Intervention.Terminer(compteRendu)
-
-instead of directly modifying entity states from controllers.
+The goal is to enforce business rules within the domain rather than modifying states arbitrarily from controllers.
 
 ### Global Error Handling
 
-A global middleware maps domain exceptions to appropriate HTTP responses, keeping controllers thin and consistent.
+A global middleware converts business exceptions into appropriate HTTP responses, helping keep controllers lightweight and consistent.
 
-## 🛠️ Technology Stack
+### Real-Time Notifications with SignalR
 
-| Area            | Technology                  |
-| --------------- | --------------------------- |
-| Language        | C#                          |
-| Framework       | .NET 8 / ASP.NET Core       |
-| API             | ASP.NET Core Web API        |
-| Frontend        | Blazor Web App              |
-| ORM             | Entity Framework Core       |
-| Database        | SQLite                      |
-| Architecture    | Clean Architecture          |
-| Design          | Domain-Driven Design        |
-| Pattern         | CQRS                        |
-| Mediator        | MediatR                     |
-| Authentication  | ASP.NET Core Identity + JWT |
-| UI              | Bootstrap                   |
-| Version Control | Git / GitHub                |
+SignalR sends notifications about new intervention requests to the manager without requiring a manual page refresh.
+
+### Photo Management
+
+The application allows photos to be associated with equipment. Files are uploaded and served by the API, while the Web interface uses the configured API address to display them.
+
+## 🛠️ Technologies
+
+| Area | Technology |
+|---|---|
+| Language | C# |
+| Framework | .NET 8 / ASP.NET Core |
+| API | ASP.NET Core Web API |
+| Web Interface | Blazor Web App — Interactive Server |
+| ORM | Entity Framework Core |
+| Database | SQLite |
+| Architecture | Clean Architecture |
+| Business Design | Domain-Driven Design |
+| Application Pattern | CQRS |
+| Mediator | MediatR |
+| Authentication | ASP.NET Core Identity and JWT |
+| Notifications | SignalR |
+| Containerization | Docker and Docker Compose |
+| User Interface | Bootstrap |
+| Version Control | Git and GitHub |
+| Demo Hosting | Render |
 
 ## 📸 Screenshots
 
@@ -194,117 +207,165 @@ A global middleware maps domain exceptions to appropriate HTTP responses, keepin
 
 ![Equipment Management](screenshots/equipements.png)
 
-### Intervention Requests
+### Intervention Request Management
 
-![Intervention Requests](screenshots/demandes.png)
+![Intervention Request Management](screenshots/demandes.png)
 
 ### Intervention Management
 
 ![Intervention Management](screenshots/interventions.png)
 
-> Screenshots showcase the main interfaces of the application.
+The screenshots show the application's main interfaces. Make sure the corresponding files exist in the repository's `screenshots/` directory.
 
-## 📁 Project Structure
+## 📁 Repository Structure
 
+```text
 GestionInterventions/
-│
 ├── src/
 │   ├── GestionInterventions.Domain/
 │   ├── GestionInterventions.Application/
 │   ├── GestionInterventions.Infrastructure/
 │   ├── GestionInterventions.Api/
 │   └── GestionInterventions.Web/
-│
 ├── screenshots/
-│   ├── accueil.png
-│   ├── equipements.png
-│   ├── demandes.png
-│   └── interventions.png
-│
 ├── GestionInterventions.sln
+├── Dockerfile
+├── Dockerfile.web
+├── docker-compose.yml
+├── .dockerignore
+├── .gitignore
 ├── README.md
-├── README_EN.md
-└── .gitignore
+└── README_EN.md
+```
 
-## 🚀 Getting Started
+## 🚀 Installation and Local Setup
 
 ### Prerequisites
 
-* .NET 8 SDK
-* Git
-* `dotnet-ef`
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [Git](https://git-scm.com/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) if you want to run the application with Docker.
+- The `dotnet-ef` tool to manage database migrations.
 
-Install the Entity Framework CLI tool:
+Install the Entity Framework Core tool if needed:
 
+```bash
 dotnet tool install --global dotnet-ef
+```
 
-### Clone the repository
+### 1. Clone the Repository
 
+```bash
 git clone https://github.com/madjidaouam7/GestionInterventions.git
 cd GestionInterventions
+```
 
-### Restore and build
+### 2. Restore and Build the Project
 
+```bash
 dotnet restore
 dotnet build
+```
 
-### Configure secrets
+### 3. Configure API Secrets
 
-Required application secrets must be configured using **User Secrets**.
+Initialize .NET User Secrets for the API project:
 
-Initialize User Secrets:
-
+```bash
 dotnet user-secrets init --project src/GestionInterventions.Api
+```
 
-Set the Manager password:
+Configure the password used by the Manager account creation mechanism:
 
+```bash
 dotnet user-secrets set "SeedAdmin:Password" "YOUR_PASSWORD" --project src/GestionInterventions.Api
+```
 
-Set the JWT signing key:
+Configure the JWT signing key with a sufficiently long and random value:
 
-dotnet user-secrets set "Jwt:Key" "YOUR_JWT_KEY" --project src/GestionInterventions.Api
+```bash
+dotnet user-secrets set "Jwt:Key" "YOUR_LONG_RANDOM_JWT_KEY" --project src/GestionInterventions.Api
+```
 
-> Never commit real secret values to the GitHub repository.
+Use your own values. Never publish actual secret values in the Git repository.
 
-### Apply database migrations
+### 4. Configure the API URL
 
+The Web application must know the API address. By default, the local project configuration uses:
+
+```text
+http://localhost:5084/
+```
+
+If the API listens on a different address or port, configure `Api:BaseUrl` in the Web application's settings to match the actual API address.
+
+### 5. Create or Update the Database
+
+```bash
 dotnet ef database update --project src/GestionInterventions.Infrastructure --startup-project src/GestionInterventions.Api
+```
 
-### Run the API
+Make sure the configured connection string points to the intended local database.
 
-In one terminal:
+### 6. Run the API
 
+In a first terminal:
+
+```bash
 dotnet run --project src/GestionInterventions.Api
+```
 
-### Run the Web application
+### 7. Run the Web Application
 
 In a second terminal:
 
+```bash
 dotnet run --project src/GestionInterventions.Web
+```
 
-## 🔐 Manager Account
+Then open the local address displayed in the Web application's terminal.
 
-A Manager account is automatically created when the application is initialized.
+> **Manager account:** The account is created by the application's initialization mechanism if the configuration and seeding process are properly set up. Its password must be configured locally. Client accounts can be created through public registration, while Technician accounts are created by the Manager.
 
-For security reasons, the password is not stored in the repository and must be configured locally using **User Secrets**.
+## 🐳 Running with Docker
 
-Client accounts can be created through public registration, while Technician accounts can be created by a Manager.
+The repository contains Docker files to build the API and Web application, as well as a Docker Compose configuration.
+
+If Docker Desktop is installed and the required local configuration is in place, run the following command from the repository root:
+
+```bash
+docker compose up --build
+```
+
+The services and their settings depend on the `docker-compose.yml` configuration. Review this file before starting the application to check the configured ports, environment variables, volumes, and network.
+
+Secrets and local data files must not be added to the Git repository.
+
+## 🧪 Tests and Continuous Integration
+
+The project contains unit test projects. To run the available tests:
+
+```bash
+dotnet test
+```
+
+GitHub Actions integration is a planned improvement to automate building the project and running tests on pushes and pull requests. The pipeline status will be displayed here once the workflow has been configured and verified.
 
 ## 📌 Project Status
 
-This is an individual training project developed to practice the design and implementation of a structured ASP.NET Core web application.
+Individual training and portfolio project developed to put the following concepts into practice:
 
-The project focuses on:
-
-* separation of concerns;
-* domain-driven design;
-* CQRS and MediatR;
-* dependency injection;
-* data access with Entity Framework Core;
-* authentication and authorization;
-* REST API design;
-* building a user interface with Blazor.
+- Separation of concerns through Clean Architecture.
+- Domain-driven design.
+- CQRS and MediatR.
+- Dependency injection and dependency inversion.
+- Data access using Entity Framework Core and SQLite.
+- Authentication and authorization.
+- REST API design.
+- Blazor user interface development.
+- Real-time notifications with SignalR.
+- Containerization and deployment of an online demo.
 
 ## 📄 License
 
-This project is intended for educational, portfolio and technical demonstration purposes.
+This project was developed for training, portfolio, and technical demonstration purposes. No specific open-source license has been declared at this time.
