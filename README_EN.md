@@ -19,7 +19,6 @@ The project was designed to put structured software architecture, separation of 
 The application is deployed on **Render**.
 
 - **Web Application:** [Access the demo](https://siyana-web-demo.onrender.com/)
-- **REST API:** [Access the API](https://siyana-api-demo.onrender.com/)
 
 > **Note:** This version is hosted on Render's free tier for demonstration purposes. Local storage used for SQLite and uploaded files may be reset after certain restarts or redeployments. Service availability may also vary. This version is therefore not intended for production use with important data.
 

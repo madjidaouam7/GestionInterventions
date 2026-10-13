@@ -12,15 +12,13 @@ Le système permet aux clients de déclarer des problèmes sur leurs équipement
 
 Le projet a été réalisé comme projet de formation afin de mettre en pratique une architecture logicielle structurée et des pratiques proches d'un environnement professionnel.
 
-## 🌐 Démonstration en ligne
+## ## 🌐 Démonstration en ligne
 
 L'application est déployée sur Render.
 
-Application Web : Accéder à Siyana DZ
+- **Application Web :** [Accéder à Siyana DZ](https://siyana-web-demo.onrender.com/)
 
-API REST : Accéder à l'API
-
-Note : Cette version est hébergée sur l'offre gratuite de Render à des fins de démonstration. La base de données SQLite et les photos stockées localement peuvent être perdues après certains redémarrages ou redéploiements. La disponibilité du service peut également varier. Cette version n'est pas destinée à une utilisation en production avec des données importantes.
+> **Note :** Cette version est hébergée sur l'offre gratuite de Render à des fins de démonstration. La base de données SQLite et les photos stockées localement peuvent être perdues après certains redémarrages ou redéploiements. La disponibilité du service peut également varier. Cette version n'est pas destinée à une utilisation en production avec des données importantes.
 
 ## 👥 Rôles et fonctionnalités
 
