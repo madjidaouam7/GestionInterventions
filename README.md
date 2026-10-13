@@ -330,11 +330,19 @@ Les secrets et les fichiers de données locaux ne doivent pas être ajoutés au 
 
 ## 🧪 Tests et intégration continue
 
-Le projet comporte des projets de tests unitaires. Pour lancer les tests disponibles :
+Le projet comporte des tests unitaires exécutables avec :
 
+```bash
 dotnet test
+```
 
-L'intégration continue avec GitHub Actions est une amélioration prévue afin d'automatiser la compilation et l'exécution des tests lors des push et des Pull Requests. Le statut du pipeline sera indiqué ici une fois sa configuration mise en place et vérifiée.
+L'intégration continue est assurée par **GitHub Actions**. À chaque push sur la branche `main` ou Pull Request vers `main`, le pipeline exécute automatiquement :
+
+- La restauration des dépendances NuGet
+- La compilation de la solution .NET 8
+- L'exécution des tests
+
+[![.NET CI](https://github.com/madjidaouam7/GestionInterventions/actions/workflows/dotnet.yml/badge.svg)](https://github.com/madjidaouam7/GestionInterventions/actions/workflows/dotnet.yml)
 
 ## 📌 État du projet
 

@@ -342,13 +342,19 @@ Secrets and local data files must not be added to the Git repository.
 
 ## 🧪 Tests and Continuous Integration
 
-The project contains unit test projects. To run the available tests:
+The project includes unit tests that can be executed with:
 
 ```bash
 dotnet test
 ```
 
-GitHub Actions integration is a planned improvement to automate building the project and running tests on pushes and pull requests. The pipeline status will be displayed here once the workflow has been configured and verified.
+Continuous integration is handled by **GitHub Actions**. On every push to the `main` branch or Pull Request targeting `main`, the pipeline automatically performs:
+
+- NuGet dependency restoration
+- .NET 8 solution build
+- Test execution
+
+[![.NET CI](https://github.com/madjidaouam7/GestionInterventions/actions/workflows/dotnet.yml/badge.svg)](https://github.com/madjidaouam7/GestionInterventions/actions/workflows/dotnet.yml)
 
 ## 📌 Project Status
 
